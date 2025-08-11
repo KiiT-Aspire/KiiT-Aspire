@@ -3,7 +3,13 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ReactMediaRecorder } from "react-media-recorder";
+import dynamic from "next/dynamic";
+const ReactMediaRecorder = dynamic(
+  () => import("react-media-recorder").then((mod) => mod.ReactMediaRecorder),
+  {
+    ssr: false,
+  }
+);
 
 const Interviewee = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -12,6 +18,14 @@ const Interviewee = () => {
   const [currentStatus, setCurrentStatus] = useState<string>("idle");
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [currentMediaUrl, setCurrentMediaUrl] = useState<string>("");
+  const [currentQuestion, setCurrentQuestion] = useState<string>("");
+  const [interviewStarted, setInterviewStarted] = useState(false);
+  const [questionCount, setQuestionCount] = useState(0);
+  const [, setTotalQuestions] = useState<string>("3+ adaptive");
+  const [interviewComplete, setInterviewComplete] = useState(false);
+  const [evaluation, setEvaluation] = useState<string>("");
+  const [score, setScore] = useState<number>(0);
+  const [questionsAsked, setQuestionsAsked] = useState<string[]>([]);
   const recorderRef = useRef<{
     startRecording?: () => void;
     stopRecording?: () => void;
@@ -20,6 +34,34 @@ const Interviewee = () => {
   }>({});
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Start interview function
+  const startInterview = useCallback(async () => {
+    try {
+      const response = await fetch("/api/audio-upload", {
+        method: "GET",
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setCurrentQuestion(result.firstQuestion);
+        setTotalQuestions(result.totalQuestions || "3+ adaptive");
+        setInterviewStarted(true);
+        setQuestionCount(1);
+        setInterviewComplete(false);
+        setEvaluation("");
+        setScore(0);
+        setQuestionsAsked([result.firstQuestion]);
+        console.log("Interview started:", result);
+      } else {
+        console.error("Failed to start interview");
+        alert("Failed to start interview. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error starting interview:", error);
+      alert("Error starting interview. Please try again.");
+    }
+  }, []);
 
   const sendAudioToAPI = useCallback(
     async (audioUrl: string, duration: number) => {
@@ -63,6 +105,8 @@ const Interviewee = () => {
               audio: base64Data,
               mimeType: audioBlob.type,
               duration: duration,
+              questionCount: questionCount,
+              questionsAsked: questionsAsked,
             };
 
             console.log("Sending payload:", {
@@ -82,7 +126,31 @@ const Interviewee = () => {
             if (apiResponse.ok) {
               const result = await apiResponse.json();
               console.log("Audio processed successfully:", result);
-              alert("Audio sent successfully!");
+
+              // Update the question with AI response
+              if (result.nextQuestion) {
+                if (result.isEvaluation) {
+                  setEvaluation(result.nextQuestion);
+                  setScore(result.score || 0);
+                  setInterviewComplete(true);
+                } else {
+                  setCurrentQuestion(result.nextQuestion);
+                  setQuestionCount(
+                    result.data?.questionCount || questionCount + 1
+                  );
+                  setQuestionsAsked(
+                    result.data?.questionsAsked || [
+                      ...questionsAsked,
+                      result.nextQuestion,
+                    ]
+                  );
+                }
+              }
+
+              // Clear the current recording after successful submission
+              if (recorderRef.current.clearBlobUrl) {
+                recorderRef.current.clearBlobUrl();
+              }
             } else {
               const errorText = await apiResponse.text();
               console.error("Failed to process audio:", errorText);
@@ -109,15 +177,17 @@ const Interviewee = () => {
         alert("Error sending audio. Check console for details.");
       }
     },
-    []
+    [questionCount, questionsAsked]
   );
 
-  // Handle spacebar recording (don't start timer here - wait for actual recording to start)
+  // Handle spacebar recording (only during interview)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.code === "Space" &&
         !isSpacePressed &&
+        interviewStarted &&
+        !interviewComplete &&
         (currentStatus === "idle" || currentStatus === "stopped")
       ) {
         event.preventDefault();
@@ -126,7 +196,6 @@ const Interviewee = () => {
           recorderRef.current.clearBlobUrl();
         if (recorderRef.current.startRecording)
           recorderRef.current.startRecording();
-        // Don't reset duration here - wait for recording to actually start
       }
     };
 
@@ -139,14 +208,16 @@ const Interviewee = () => {
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    if (interviewStarted && !interviewComplete) {
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+    }
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [isSpacePressed, currentStatus]);
+  }, [isSpacePressed, currentStatus, interviewStarted, interviewComplete]);
 
   // Handle duration timer based on recording status (start timer only when actually recording)
   useEffect(() => {
@@ -235,7 +306,102 @@ const Interviewee = () => {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">Interview Audio Recorder</h1>
+      <h1 className="text-3xl font-bold mb-6">AI Interview Platform</h1>
+
+      {!interviewStarted ? (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-2xl">Welcome to the Interview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-left ">
+              <p className="text-lg mb-4 px-2">
+                You are about to start an AI-powered interview
+              </p>
+              <div className="text-left px-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  • The AI will ask you <strong>3+ questions</strong> adaptively
+                  based on your responses
+                </p>
+                <p className="text-sm text-gray-600 mb-2">
+                  • Questions are selected randomly from different topics
+                </p>
+                <p className="text-sm text-gray-600 mb-2">
+                  • If you give incomplete answers, AI will ask follow-up
+                  questions
+                </p>
+                <p className="text-sm text-gray-600 mb-2">
+                  • If you can&apos;t answer a question, just say so and AI will
+                  switch topics
+                </p>
+                <p className="text-sm text-gray-600 mb-6">
+                  • After thorough assessment, you&apos;ll receive a score and
+                  detailed feedback
+                </p>
+              </div>
+              <Button onClick={startInterview} className="px-8 py-3 text-lg">
+                Start Interview
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Interview Progress */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Interview Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-sm text-gray-600">
+                  Question {questionCount} (Adaptive Interview)
+                </span>
+                <span
+                  className={`text-sm px-2 py-1 rounded ${
+                    interviewComplete
+                      ? "bg-green-100 text-green-800"
+                      : "bg-blue-100 text-blue-800"
+                  }`}
+                >
+                  {interviewComplete ? "Complete" : "In Progress"}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min((questionCount / 6) * 100, 100)}%`,
+                  }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Progress based on your responses (minimum 3 questions)
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Current Question */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Current Question</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                <p className="text-lg font-medium text-blue-900">
+                  {currentQuestion || "Loading question..."}
+                </p>
+              </div>
+              {!interviewComplete && (
+                <p className="text-sm text-gray-600 mt-3">
+                  💡 Take your time to think, then hold SPACEBAR to record your
+                  answer.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <ReactMediaRecorder
         audio={true}
@@ -289,156 +455,188 @@ const Interviewee = () => {
 
           return (
             <>
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Audio Recording</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-center">
-                    <div className="mb-4">
-                      <div
-                        className={`inline-flex items-center justify-center w-32 h-32 rounded-full border-4 ${
-                          status === "recording"
-                            ? "border-red-500 bg-red-50 animate-pulse"
-                            : "border-gray-300 bg-gray-50"
-                        }`}
-                      >
+              {interviewStarted && !interviewComplete && (
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Record Your Answer</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-center">
+                      <div className="mb-4">
                         <div
-                          className={`w-16 h-16 rounded-full ${
+                          className={`inline-flex items-center justify-center w-32 h-32 rounded-full border-4 ${
                             status === "recording"
-                              ? "bg-red-500"
-                              : "bg-gray-400"
+                              ? "border-red-500 bg-red-50 animate-pulse"
+                              : "border-gray-300 bg-gray-50"
                           }`}
-                        />
+                        >
+                          <div
+                            className={`w-16 h-16 rounded-full ${
+                              status === "recording"
+                                ? "bg-red-500"
+                                : "bg-gray-400"
+                            }`}
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="mb-4">
-                      <p className="text-lg font-semibold">
-                        {getStatusMessage(status)}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Duration: {formatTime(recordingDuration)}
-                      </p>
-                      <p className="text-xs text-gray-500">Status: {status}</p>
-                    </div>
+                      <div className="mb-4">
+                        <p className="text-lg font-semibold">
+                          {getStatusMessage(status)}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Duration: {formatTime(recordingDuration)}
+                        </p>
+                      </div>
 
-                    {isProcessing && (
-                      <p className="text-blue-600">
-                        Sending audio to server...
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="text-center text-sm text-gray-500">
-                    <p>• Hold SPACEBAR to start recording</p>
-                    <p>• Release SPACEBAR to stop recording</p>
-                    <p>• Click Send Audio button to send to server</p>
-                  </div>
-
-                  {mediaBlobUrl && (
-                    <div className="mt-6">
-                      <h3 className="text-lg font-semibold mb-2">
-                        Current Recording:
-                      </h3>
-                      {audioDuration > 0 && (
-                        <p className="text-sm text-gray-600 mb-2">
-                          Audio Duration:{" "}
-                          {formatTime(Math.floor(audioDuration))}
+                      {isProcessing && (
+                        <p className="text-blue-600">
+                          Processing your answer...
                         </p>
                       )}
-                      <audio
-                        ref={audioRef}
-                        controls
-                        preload="metadata"
-                        className="w-full mb-4"
-                        onLoadedMetadata={handleAudioMetadataLoaded}
-                        onCanPlay={() => {
-                          // Try to get duration when audio can play
-                          if (
-                            audioRef.current &&
-                            audioRef.current.duration &&
-                            !isNaN(audioRef.current.duration)
-                          ) {
-                            setAudioDuration(audioRef.current.duration);
-                          }
-                        }}
-                        onLoadedData={() => {
-                          // Another event that fires when data is loaded
-                          if (
-                            audioRef.current &&
-                            audioRef.current.duration &&
-                            !isNaN(audioRef.current.duration)
-                          ) {
-                            setAudioDuration(audioRef.current.duration);
-                          }
-                        }}
-                      >
-                        <source src={mediaBlobUrl} type="audio/webm" />
-                        <source src={mediaBlobUrl} type="audio/wav" />
-                        Your browser does not support the audio element.
-                      </audio>
+                    </div>
 
-                      <div className="text-center space-x-4">
-                        <Button
-                          onClick={handleSendAudio}
-                          disabled={isProcessing || !mediaBlobUrl}
-                          className="px-6 py-2"
-                        >
-                          {isProcessing ? "Sending..." : "Send Audio"}
-                        </Button>
+                    <div className="text-center text-sm text-gray-500">
+                      <p>• Hold SPACEBAR to start recording your answer</p>
+                      <p>• Release SPACEBAR to stop recording</p>
+                      <p>• Click Submit Answer to get the next question</p>
+                    </div>
 
-                        <Button
-                          onClick={handleClearRecording}
-                          disabled={isProcessing}
-                          variant="outline"
-                          className="px-6 py-2"
+                    {mediaBlobUrl && (
+                      <div className="mt-6">
+                        <h3 className="text-lg font-semibold mb-2">
+                          Your Recording:
+                        </h3>
+                        {audioDuration > 0 && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            Duration: {formatTime(Math.floor(audioDuration))}
+                          </p>
+                        )}
+                        <audio
+                          ref={audioRef}
+                          controls
+                          preload="metadata"
+                          className="w-full mb-4"
+                          onLoadedMetadata={handleAudioMetadataLoaded}
+                          onCanPlay={() => {
+                            if (
+                              audioRef.current &&
+                              audioRef.current.duration &&
+                              !isNaN(audioRef.current.duration)
+                            ) {
+                              setAudioDuration(audioRef.current.duration);
+                            }
+                          }}
+                          onLoadedData={() => {
+                            if (
+                              audioRef.current &&
+                              audioRef.current.duration &&
+                              !isNaN(audioRef.current.duration)
+                            ) {
+                              setAudioDuration(audioRef.current.duration);
+                            }
+                          }}
                         >
-                          Clear Recording
-                        </Button>
+                          <source src={mediaBlobUrl} type="audio/webm" />
+                          <source src={mediaBlobUrl} type="audio/wav" />
+                          Your browser does not support the audio element.
+                        </audio>
+
+                        <div className="text-center space-x-4">
+                          <Button
+                            onClick={handleSendAudio}
+                            disabled={isProcessing || !mediaBlobUrl}
+                            className="px-6 py-2 bg-green-600 hover:bg-green-700"
+                          >
+                            {isProcessing ? "Processing..." : "Submit Answer"}
+                          </Button>
+
+                          <Button
+                            onClick={handleClearRecording}
+                            disabled={isProcessing}
+                            variant="outline"
+                            className="px-6 py-2"
+                          >
+                            Record Again
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {interviewComplete && (
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Interview Complete!</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center">
+                      <div className="mb-6">
+                        <div className="inline-flex items-center justify-center w-32 h-32 rounded-full border-4 border-green-500 bg-green-50">
+                          <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
+                            <span className="text-white text-2xl">✓</span>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Debug Information */}
-                      <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-                        <p>
-                          <strong>Debug Info:</strong>
+                      {/* Score Display */}
+                      <div className="mb-6 p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                          Your Score
+                        </h3>
+                        <div className="text-6xl font-bold text-blue-600 mb-2">
+                          {score}
+                        </div>
+                        <div className="text-lg text-gray-600">out of 30</div>
+                        <div className="mt-2">
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full transition-all duration-500 ${
+                                score >= 24
+                                  ? "bg-green-500"
+                                  : score >= 18
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                              }`}
+                              style={{ width: `${(score / 30) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Evaluation Text */}
+                      {evaluation && (
+                        <div className="mb-6 p-4 bg-gray-50 rounded-lg text-left">
+                          <h3 className="text-lg font-semibold mb-3 text-gray-800">
+                            Detailed Feedback
+                          </h3>
+                          <div className="text-sm text-gray-700 whitespace-pre-line">
+                            {evaluation.replace("EVALUATION:", "").trim()}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <p className="text-lg font-semibold text-green-800">
+                          Thank you for completing the interview!
                         </p>
-                        <p>Recording Status: {status}</p>
-                        <p>Duration: {recordingDuration}s</p>
-                        <p>
-                          Audio URL:{" "}
-                          {mediaBlobUrl ? "Available" : "Not available"}
+                        <p className="text-sm text-gray-600 mb-4">
+                          Your responses have been evaluated and scored above.
                         </p>
-                        <p>Space Pressed: {isSpacePressed ? "Yes" : "No"}</p>
+                        <Button
+                          onClick={startInterview}
+                          variant="outline"
+                          className="mt-4"
+                        >
+                          Take Interview Again
+                        </Button>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Instructions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      1. Make sure your microphone is connected and permissions
-                      are granted
-                    </p>
-                    <p>2. Hold down the SPACEBAR to start recording</p>
-                    <p>3. Speak clearly into your microphone</p>
-                    <p>4. Release the SPACEBAR to stop recording</p>
-                    <p>
-                      5. Click the &quot;Send Audio&quot; button to send to the
-                      server
-                    </p>
-                    <p>
-                      6. Audio will be recorded in WebM format with Opus codec
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </>
           );
         }}
