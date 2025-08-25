@@ -92,7 +92,7 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
 
     // Generate response using Gemini model
     const response = await genAI.models.generateContent({
-      model: "gemini-2.5-flash-lite",
+      model: "gemini-2.5-pro",
       config: {
         thinkingConfig: {
           thinkingBudget: 512,
