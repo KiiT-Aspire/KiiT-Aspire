@@ -28,7 +28,7 @@ Available Questions:
 ${INTERVIEW_QUESTIONS.map((q, index) => `${index + 1}. ${q}`).join("\n")}
 
 Interview Rules:
-- Ask 3-6 questions total based on response quality
+- Ask 2-4 questions total based on response quality
 - If answer is WRONG/INCOMPLETE: Ask ONE follow-up on same topic, then move on
 - If answer is GOOD: Move to next topic
 - If candidate can't answer: Switch to different topic immediately
@@ -92,7 +92,7 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
 
     // Generate response using Gemini model
     const response = await genAI.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-2.5-flash",
       config: {
         thinkingConfig: {
           thinkingBudget: 512,
