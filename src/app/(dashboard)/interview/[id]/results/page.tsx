@@ -135,8 +135,8 @@ const ResultsPage = () => {
           completedCount: data.statistics?.completedCount || 0,
           inProgressCount: data.statistics?.inProgressCount || 0,
           abandonedCount: data.statistics?.abandonedCount || 0,
-          averageScore: typeof data.statistics?.averageScore === 'number' 
-            ? data.statistics.averageScore 
+          averageScore: data.statistics?.averageScore 
+            ? parseFloat(data.statistics.averageScore) 
             : 0,
           completionRate: data.statistics?.totalResponses
             ? (data.statistics.completedCount / data.statistics.totalResponses) * 100

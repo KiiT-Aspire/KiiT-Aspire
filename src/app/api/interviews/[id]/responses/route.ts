@@ -78,6 +78,14 @@ export async function GET(
       .from(interviewResponses)
       .where(eq(interviewResponses.interviewId, interviewId));
 
+    // Debug logging
+    console.log("🔍 DEBUG - Raw responses:", responses.map(r => ({ 
+      id: r.id, 
+      status: r.status, 
+      score: r.score 
+    })));
+    console.log("🔍 DEBUG - Statistics:", stats[0]);
+
     return NextResponse.json({
       success: true,
       data: responses,
