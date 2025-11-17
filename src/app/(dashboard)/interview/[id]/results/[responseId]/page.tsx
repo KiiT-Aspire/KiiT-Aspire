@@ -57,7 +57,9 @@ const ResponseDetailPage = () => {
   const [response, setResponse] = useState<ResponseDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
+    null
+  );
 
   useEffect(() => {
     if (interviewId && responseId) {
@@ -170,8 +172,8 @@ const ResponseDetailPage = () => {
     setPlayingAudio(audioUrl);
     const audio = new Audio(audioUrl);
     setAudioElement(audio);
-    
-    audio.play().catch(error => {
+
+    audio.play().catch((error) => {
       console.error("Error playing audio:", error);
       toast.error("Failed to play audio");
       setPlayingAudio(null);
@@ -255,7 +257,9 @@ const ResponseDetailPage = () => {
                   <User className="h-5 w-5 mr-2 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-600">Student Name</p>
-                    <p className="font-medium text-lg">{response.studentName}</p>
+                    <p className="font-medium text-lg">
+                      {response.studentName}
+                    </p>
                   </div>
                 </div>
 
@@ -271,7 +275,9 @@ const ResponseDetailPage = () => {
                   <FileText className="h-5 w-5 mr-2 text-gray-500" />
                   <div>
                     <p className="text-sm text-gray-600">Status</p>
-                    <div className="mt-1">{getStatusBadge(response.status)}</div>
+                    <div className="mt-1">
+                      {getStatusBadge(response.status)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -334,7 +340,9 @@ const ResponseDetailPage = () => {
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">Overall Evaluation</p>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Overall Evaluation
+                  </p>
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <p className="text-sm">
                       {response.evaluation || "No evaluation provided"}
@@ -378,7 +386,9 @@ const ResponseDetailPage = () => {
                               Question
                             </h4>
                           </div>
-                          <p className="text-gray-700 ml-11">{qa.questionText}</p>
+                          <p className="text-gray-700 ml-11">
+                            {qa.questionText}
+                          </p>
                         </div>
                       </div>
 
