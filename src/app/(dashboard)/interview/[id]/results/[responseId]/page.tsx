@@ -57,12 +57,23 @@ const ResponseDetailPage = () => {
   const [response, setResponse] = useState<ResponseDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (interviewId && responseId) {
       fetchResponseDetails();
     }
   }, [interviewId, responseId]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }
+    };
+  }, [audioElement]);
 
   const fetchResponseDetails = async () => {
     try {
@@ -142,14 +153,35 @@ const ResponseDetailPage = () => {
   };
 
   const playAudio = (audioUrl: string) => {
+    // Stop currently playing audio if any
+    if (audioElement) {
+      audioElement.pause();
+      audioElement.currentTime = 0;
+    }
+
+    // If clicking the same audio that's playing, just stop it
     if (playingAudio === audioUrl) {
       setPlayingAudio(null);
-    } else {
-      setPlayingAudio(audioUrl);
-      const audio = new Audio(audioUrl);
-      audio.play();
-      audio.onended = () => setPlayingAudio(null);
+      setAudioElement(null);
+      return;
     }
+
+    // Play new audio
+    setPlayingAudio(audioUrl);
+    const audio = new Audio(audioUrl);
+    setAudioElement(audio);
+    
+    audio.play().catch(error => {
+      console.error("Error playing audio:", error);
+      toast.error("Failed to play audio");
+      setPlayingAudio(null);
+      setAudioElement(null);
+    });
+
+    audio.onended = () => {
+      setPlayingAudio(null);
+      setAudioElement(null);
+    };
   };
 
   if (loading) {

@@ -30,12 +30,15 @@ export default function Home() {
                 className="rounded-lg"
               />
               <span className="text-2xl font-bold text-green-800">
-                KiiT Aspire
+                EchoGrade
               </span>
             </div>
             <div className="flex gap-4">
               <Link href="/interview">
-                <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-50">
+                <Button
+                  variant="outline"
+                  className="border-green-600 text-green-700 hover:bg-green-50"
+                >
                   Dashboard
                 </Button>
               </Link>
@@ -57,7 +60,7 @@ export default function Home() {
               <BsLightning className="text-yellow-500" />
               <span>AI-Powered Interview Platform</span>
             </div>
-            
+
             <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight">
               Transform Your Interview
               <br />
@@ -65,12 +68,13 @@ export default function Home() {
                 Experience with AI
               </span>
             </h1>
-            
+
             <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
-              Conduct adaptive, intelligent interviews with real-time speech recognition,
-              AI-generated questions, and comprehensive evaluation reports.
+              Conduct adaptive, intelligent interviews with real-time speech
+              recognition, AI-generated questions, and comprehensive evaluation
+              reports.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
               <Link href="/interview">
                 <Button className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all">
@@ -79,7 +83,10 @@ export default function Home() {
                 </Button>
               </Link>
               <Link href="/interviewee">
-                <Button variant="outline" className="border-2 border-green-600 text-green-700 hover:bg-green-50 px-8 py-6 text-lg rounded-xl">
+                <Button
+                  variant="outline"
+                  className="border-2 border-green-600 text-green-700 hover:bg-green-50 px-8 py-6 text-lg rounded-xl"
+                >
                   <BsMicFill className="mr-2" size={20} />
                   Take Interview
                 </Button>
@@ -112,8 +119,9 @@ export default function Home() {
                   AI-Powered Questions
                 </h3>
                 <p className="text-gray-600">
-                  Leverage Google GenAI to generate contextual, adaptive interview questions
-                  that match candidate responses in real-time.
+                  Leverage Google GenAI to generate contextual, adaptive
+                  interview questions that match candidate responses in
+                  real-time.
                 </p>
               </CardContent>
             </Card>
@@ -128,8 +136,8 @@ export default function Home() {
                   Speech Recognition
                 </h3>
                 <p className="text-gray-600">
-                  Advanced audio recording and speech-to-text capabilities for seamless
-                  voice-based interviews with real-time transcription.
+                  Advanced audio recording and speech-to-text capabilities for
+                  seamless voice-based interviews with real-time transcription.
                 </p>
               </CardContent>
             </Card>
@@ -144,8 +152,8 @@ export default function Home() {
                   Adaptive Flow
                 </h3>
                 <p className="text-gray-600">
-                  Dynamic interview paths that adjust difficulty and topics based on
-                  candidate performance and expertise level.
+                  Dynamic interview paths that adjust difficulty and topics
+                  based on candidate performance and expertise level.
                 </p>
               </CardContent>
             </Card>
@@ -160,8 +168,8 @@ export default function Home() {
                   Comprehensive Reports
                 </h3>
                 <p className="text-gray-600">
-                  Detailed evaluation reports with scores, feedback, and performance
-                  analytics for every interview session.
+                  Detailed evaluation reports with scores, feedback, and
+                  performance analytics for every interview session.
                 </p>
               </CardContent>
             </Card>
@@ -176,8 +184,8 @@ export default function Home() {
                   Secure & Private
                 </h3>
                 <p className="text-gray-600">
-                  Enterprise-grade security with user authentication, role-based access,
-                  and encrypted data storage using PostgreSQL.
+                  Enterprise-grade security with user authentication, role-based
+                  access, and encrypted data storage using PostgreSQL.
                 </p>
               </CardContent>
             </Card>
@@ -192,8 +200,8 @@ export default function Home() {
                   Multi-User Support
                 </h3>
                 <p className="text-gray-600">
-                  Manage multiple candidates, track interview sessions, and organize
-                  assessments by subject areas and roles.
+                  Manage multiple candidates, track interview sessions, and
+                  organize assessments by subject areas and roles.
                 </p>
               </CardContent>
             </Card>
@@ -225,7 +233,8 @@ export default function Home() {
                 Create Interview
               </h3>
               <p className="text-gray-600">
-                Set up your interview with custom questions, subjects, and evaluation criteria.
+                Set up your interview with custom questions, subjects, and
+                evaluation criteria.
               </p>
             </div>
 
@@ -240,7 +249,8 @@ export default function Home() {
                 Conduct Session
               </h3>
               <p className="text-gray-600">
-                AI guides the interview with adaptive questions based on candidate responses.
+                AI guides the interview with adaptive questions based on
+                candidate responses.
               </p>
             </div>
 
@@ -255,7 +265,8 @@ export default function Home() {
                 Get Results
               </h3>
               <p className="text-gray-600">
-                Receive detailed evaluation reports with scores and comprehensive feedback.
+                Receive detailed evaluation reports with scores and
+                comprehensive feedback.
               </p>
             </div>
           </div>
@@ -269,7 +280,8 @@ export default function Home() {
             Ready to Transform Your Interviews?
           </h2>
           <p className="text-xl text-green-100 mb-8">
-            Join KiiT Aspire today and experience the future of intelligent interviewing.
+            Join EchoGrade today and experience the future of intelligent
+            interviewing.
           </p>
           <Link href="/interview">
             <Button className="bg-white text-green-700 hover:bg-gray-100 px-8 py-6 text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all">
@@ -292,22 +304,44 @@ export default function Home() {
                   height={40}
                   className="rounded-lg"
                 />
-                <span className="text-2xl font-bold text-white">KiiT Aspire</span>
+                <span className="text-2xl font-bold text-white">EchoGrade</span>
               </div>
               <p className="text-gray-400">
-                AI-powered interview platform for modern recruitment and assessment.
+                AI-powered interview platform for modern recruitment and
+                assessment.
               </p>
             </div>
-            
+
             <div>
               <h4 className="text-white font-bold mb-4">Quick Links</h4>
               <ul className="space-y-2">
-                <li><Link href="/interview" className="hover:text-green-400 transition-colors">Dashboard</Link></li>
-                <li><Link href="/interviewee" className="hover:text-green-400 transition-colors">Take Interview</Link></li>
-                <li><Link href="/results" className="hover:text-green-400 transition-colors">Results</Link></li>
+                <li>
+                  <Link
+                    href="/interview"
+                    className="hover:text-green-400 transition-colors"
+                  >
+                    Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/interviewee"
+                    className="hover:text-green-400 transition-colors"
+                  >
+                    Take Interview
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/results"
+                    className="hover:text-green-400 transition-colors"
+                  >
+                    Results
+                  </Link>
+                </li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="text-white font-bold mb-4">Technology</h4>
               <ul className="space-y-2 text-gray-400">
@@ -318,9 +352,9 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500">
-            <p>&copy; 2024 KiiT Aspire. All rights reserved.</p>
+            <p>&copy; 2025 EchoGrade. All rights reserved.</p>
           </div>
         </div>
       </footer>

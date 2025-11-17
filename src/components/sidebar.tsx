@@ -19,11 +19,11 @@ const Sidebar = () => {
     >
       <Image
         src={kiitLogo}
-        alt="KiiT Aspire Logo"
+        alt="EchoGrade Logo"
         className="w-full h-auto mb-4 rounded-2xl"
       />
       <div className="hidden md:block font-extrabold text-3xl mb-15 text-green-800 text-center">
-        KiiT Aspire
+        EchoGrade
       </div>
       <div className="flex md:hidden justify-center items-center mt-4 mb-8 text-green-700">
         <BsRobot size={40} />

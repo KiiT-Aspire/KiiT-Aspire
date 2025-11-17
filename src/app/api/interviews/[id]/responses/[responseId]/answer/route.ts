@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
-import { interviewResponses, questionAnswers, interviews, interviewQuestions } from "@/db/schema";
+import {
+  interviewResponses,
+  questionAnswers,
+  interviews,
+  interviewQuestions,
+} from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { GoogleGenAI } from "@google/genai";
+import { put } from "@vercel/blob";
 
 // Supported audio formats
 const SUPPORTED_FORMATS = [
@@ -22,7 +28,9 @@ const genAI = new GoogleGenAI({
 
 // Extract score from evaluation text
 function extractScore(evaluationText: string): number {
-  const scoreMatch = evaluationText.match(/(\d+)(?:\s*(?:\/|out of)\s*(?:30|100)|\s*points?)/i);
+  const scoreMatch = evaluationText.match(
+    /(\d+)(?:\s*(?:\/|out of)\s*(?:30|100)|\s*points?)/i
+  );
   if (scoreMatch) {
     const score = parseInt(scoreMatch[1]);
     if (score > 30) {
@@ -73,9 +81,17 @@ Evaluation:
       { text: SYSTEM_PROMPT },
       {
         text: `Interview Context:
-- Question ${currentQuestionCount} | Total asked: ${currentQuestionsAsked.length}
-- Previous: "${currentQuestionsAsked[currentQuestionsAsked.length - 1] || "None"}"
-- History: ${currentQuestionsAsked.length > 0 ? currentQuestionsAsked.join(" | ") : "None"}
+- Question ${currentQuestionCount} | Total asked: ${
+          currentQuestionsAsked.length
+        }
+- Previous: "${
+          currentQuestionsAsked[currentQuestionsAsked.length - 1] || "None"
+        }"
+- History: ${
+          currentQuestionsAsked.length > 0
+            ? currentQuestionsAsked.join(" | ")
+            : "None"
+        }
 
 Based on the audio response, decide: next question or "EVALUATION:" if assessment complete.`,
       },
@@ -88,7 +104,7 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
     ];
 
     const response = await genAI.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-flash-lite",
       config: {
         thinkingConfig: {
           thinkingBudget: 512,
@@ -97,7 +113,8 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
       contents: contents,
     });
 
-    const aiResponse = response.text || "Could you please elaborate on your previous answer?";
+    const aiResponse =
+      response.text || "Could you please elaborate on your previous answer?";
 
     if (aiResponse.startsWith("EVALUATION:")) {
       return {
@@ -119,17 +136,21 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
     }
   } catch (error) {
     console.error("Error processing audio with AI:", error);
-    
+
     if (currentQuestionsAsked.length >= 5) {
       return {
-        nextQuestion: "EVALUATION: Thank you for completing the interview. Score: 21/30",
+        nextQuestion:
+          "EVALUATION: Thank you for completing the interview. Score: 21/30",
         isEvaluation: true,
         score: 21,
         questionCount: currentQuestionCount,
         questionsAsked: currentQuestionsAsked,
       };
     } else {
-      const fallbackQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)] || "Can you explain your experience with this subject?";
+      const fallbackQuestion =
+        availableQuestions[
+          Math.floor(Math.random() * availableQuestions.length)
+        ] || "Can you explain your experience with this subject?";
       return {
         nextQuestion: fallbackQuestion,
         isEvaluation: false,
@@ -148,7 +169,14 @@ export async function POST(
   try {
     const { id: interviewId, responseId } = await params;
     const body = await request.json();
-    const { audio, mimeType, duration, questionText, questionCount, questionsAsked } = body;
+    const {
+      audio,
+      mimeType,
+      duration,
+      questionText,
+      questionCount,
+      questionsAsked,
+    } = body;
 
     // Validate required fields
     if (!audio || !mimeType) {
@@ -161,7 +189,10 @@ export async function POST(
     // Validate audio format
     if (!SUPPORTED_FORMATS.includes(mimeType)) {
       return NextResponse.json(
-        { error: "Unsupported audio format", supportedFormats: SUPPORTED_FORMATS },
+        {
+          error: "Unsupported audio format",
+          supportedFormats: SUPPORTED_FORMATS,
+        },
         { status: 400 }
       );
     }
@@ -174,15 +205,24 @@ export async function POST(
       .limit(1);
 
     if (!response) {
-      return NextResponse.json({ error: "Response not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Response not found" },
+        { status: 404 }
+      );
     }
 
     if (response.interviewId !== interviewId) {
-      return NextResponse.json({ error: "Response does not belong to this interview" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Response does not belong to this interview" },
+        { status: 400 }
+      );
     }
 
     if (response.status !== "in_progress") {
-      return NextResponse.json({ error: "Interview is not in progress" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Interview is not in progress" },
+        { status: 400 }
+      );
     }
 
     // Get available questions for this interview
@@ -191,28 +231,49 @@ export async function POST(
       .from(interviewQuestions)
       .where(eq(interviewQuestions.interviewId, interviewId));
 
-    const availableQuestions = questions.map(q => q.text);
+    const availableQuestions = questions.map((q) => q.text);
+
+    // Convert base64 to buffer for upload
+    let audioBuffer: Buffer;
+    try {
+      audioBuffer = Buffer.from(audio, "base64");
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Invalid base64 audio data" },
+        { status: 400 }
+      );
+    }
+
+    // Upload audio to Vercel Blob
+    let audioUrl: string | null = null;
+    try {
+      const filename = `interview-${interviewId}/response-${responseId}/answer-${Date.now()}.webm`;
+      const blob = await put(filename, audioBuffer, {
+        access: "public",
+        contentType: mimeType,
+      });
+      audioUrl = blob.url;
+    } catch (error) {
+      console.error("Error uploading audio to Vercel Blob:", error);
+      // Continue even if upload fails - we'll still process the audio
+    }
 
     // Store this answer in the database
     const currentQuestionOrder = questionCount || 1;
     await db.insert(questionAnswers).values({
       responseId: responseId,
-      questionText: questionText || questionsAsked?.[questionsAsked.length - 1] || "Question",
+      questionText:
+        questionText ||
+        questionsAsked?.[questionsAsked.length - 1] ||
+        "Question",
       audioDuration: duration || null,
       questionOrder: currentQuestionOrder,
-      // audioUrl and audioTranscript can be added later if you implement storage
+      audioUrl: audioUrl,
     });
 
     // Process audio with AI
     const currentQuestionCount = questionCount || 1;
     const currentQuestionsAsked = questionsAsked || [];
-
-    let audioBuffer: Buffer;
-    try {
-      audioBuffer = Buffer.from(audio, "base64");
-    } catch (error) {
-      return NextResponse.json({ error: "Invalid base64 audio data" }, { status: 400 });
-    }
 
     const aiResult = await processAudioWithAI(
       audio,
@@ -261,9 +322,11 @@ export async function POST(
         processedAt: new Date().toISOString(),
       },
     });
-
   } catch (error) {
     console.error("Error processing answer:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

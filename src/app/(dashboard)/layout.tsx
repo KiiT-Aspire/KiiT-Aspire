@@ -1,8 +1,8 @@
 import Sidebar from "@/components/sidebar";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "KiiT Aspire | Dashboard",
-  description: "KiiT Aspire Dashboard",
+  title: "EchoGrade | Dashboard",
+  description: "EchoGrade Dashboard",
 };
 export default function DashboardLayout({
   children,

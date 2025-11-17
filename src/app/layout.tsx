@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "KiiT Aspire",
-  description: "Welcome to KiiT Aspire",
+  title: "EchoGrade",
+  description: "Welcome to EchoGrade",
 };
 
 export default function RootLayout({
