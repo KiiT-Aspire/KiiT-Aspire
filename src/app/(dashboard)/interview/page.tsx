@@ -29,16 +29,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  PlusCircle, 
-  Edit3, 
-  Users, 
-  BookOpen, 
-  Link2, 
+import {
+  PlusCircle,
+  Edit3,
+  Users,
+  BookOpen,
+  Link2,
   BarChart3,
   Loader2,
   Copy,
-  CheckCircle2
+  CheckCircle2,
 } from "lucide-react";
 
 interface Question {
@@ -123,7 +123,8 @@ const InterviewPage = () => {
             name: interview.name,
             subject: interview.subject,
             questions: interview.questions || [],
-            questionCount: interview.questionCount || interview.questions?.length || 0,
+            questionCount:
+              interview.questionCount || interview.questions?.length || 0,
             candidatesCount: interview.responseCount || 0,
             createdAt: new Date(interview.createdAt).toLocaleDateString(),
             isActive: interview.isActive,
@@ -310,7 +311,8 @@ const InterviewPage = () => {
         // Refresh interviews list
         await fetchInterviews(userId);
       } else {
-        const errorMessage = data.error || data.message || "Failed to create interview";
+        const errorMessage =
+          data.error || data.message || "Failed to create interview";
         console.error("Error from API:", errorMessage);
         toast.error(errorMessage);
       }
@@ -433,7 +435,11 @@ const InterviewPage = () => {
   };
 
   const deleteInterview = async (interviewId: string) => {
-    if (!confirm("Are you sure you want to delete this interview? This will also delete all student responses.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this interview? This will also delete all student responses."
+      )
+    ) {
       return;
     }
 
@@ -524,589 +530,612 @@ const InterviewPage = () => {
                 </Select>
               </div>
 
-          <Dialog
-            open={isCreateDialogOpen}
-            onOpenChange={setIsCreateDialogOpen}
-          >
-            <DialogTrigger asChild>
-              <Button className="bg-green-600 hover:bg-green-700 text-white">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Create New Interview
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New Interview</DialogTitle>
-                <DialogDescription>
-                  Set up a new mock interview with custom questions and
-                  suggested questions to choose from.
-                </DialogDescription>
-              </DialogHeader>
+              <Dialog
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button className="bg-green-600 hover:bg-green-700 text-white">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Create New Interview
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Create New Interview</DialogTitle>
+                    <DialogDescription>
+                      Set up a new mock interview with custom questions and
+                      suggested questions to choose from.
+                    </DialogDescription>
+                  </DialogHeader>
 
-              <div className="space-y-6">
-                {/* Interview Basic Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="interview-name">Interview Name</Label>
-                    <Input
-                      id="interview-name"
-                      placeholder="Enter interview name"
-                      value={currentInterview.name || ""}
-                      onChange={(e) =>
-                        setCurrentInterview((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="subject">Subject</Label>
-                    <Select
-                      value={currentInterview.subject || ""}
-                      onValueChange={(value) =>
-                        setCurrentInterview((prev) => ({
-                          ...prev,
-                          subject: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select subject" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {subjects.map((subject) => (
-                          <SelectItem key={subject} value={subject}>
-                            {subject}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Add Custom Question */}
-                <div className="border border-green-200 rounded-lg p-4 bg-green-50">
-                  <h3 className="font-semibold text-green-800 mb-3">
-                    Add Custom Question
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="question-text">Question</Label>
-                      <Textarea
-                        id="question-text"
-                        placeholder="Enter your question"
-                        value={currentQuestion.text}
-                        onChange={(e) =>
-                          setCurrentQuestion((prev) => ({
-                            ...prev,
-                            text: e.target.value,
-                          }))
-                        }
-                      />
+                  <div className="space-y-6">
+                    {/* Interview Basic Info */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="interview-name">Interview Name</Label>
+                        <Input
+                          id="interview-name"
+                          placeholder="Enter interview name"
+                          value={currentInterview.name || ""}
+                          onChange={(e) =>
+                            setCurrentInterview((prev) => ({
+                              ...prev,
+                              name: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="subject">Subject</Label>
+                        <Select
+                          value={currentInterview.subject || ""}
+                          onValueChange={(value) =>
+                            setCurrentInterview((prev) => ({
+                              ...prev,
+                              subject: value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select subject" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subjects.map((subject) => (
+                              <SelectItem key={subject} value={subject}>
+                                {subject}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="flex justify-end items-end">
+
+                    {/* Add Custom Question */}
+                    <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                      <h3 className="font-semibold text-green-800 mb-3">
+                        Add Custom Question
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <Label htmlFor="question-text">Question</Label>
+                          <Textarea
+                            id="question-text"
+                            placeholder="Enter your question"
+                            value={currentQuestion.text}
+                            onChange={(e) =>
+                              setCurrentQuestion((prev) => ({
+                                ...prev,
+                                text: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="flex justify-end items-end">
+                          <Button
+                            onClick={addQuestion}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            Add Question
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Question Suggestions */}
+                    {currentInterview.subject && (
+                      <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                        <h3 className="font-semibold text-blue-800 mb-3">
+                          Question Suggestions for {currentInterview.subject}
+                        </h3>
+                        <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                          {questionSuggestions
+                            .filter(
+                              (q) => q.subject === currentInterview.subject
+                            )
+                            .map((question) => (
+                              <div
+                                key={question.id}
+                                className="flex items-center justify-between bg-white p-3 rounded border hover:bg-gray-50 transition-colors"
+                              >
+                                <div className="flex-1">
+                                  <p className="text-sm">{question.text}</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => addSuggestedQuestion(question)}
+                                  className="ml-3 text-blue-600 border-blue-300 hover:bg-blue-50"
+                                >
+                                  Add
+                                </Button>
+                              </div>
+                            ))}
+                          {questionSuggestions.filter(
+                            (q) => q.subject === currentInterview.subject
+                          ).length === 0 && (
+                            <p className="text-gray-500 text-center py-4">
+                              No suggestions available for this subject.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selected Questions */}
+                    {currentInterview.questions &&
+                      currentInterview.questions.length > 0 && (
+                        <div className="border border-gray-200 rounded-lg p-4">
+                          <h3 className="font-semibold text-gray-800 mb-3">
+                            Selected Questions (
+                            {currentInterview.questions.length})
+                          </h3>
+                          <div className="space-y-2">
+                            {currentInterview.questions.map(
+                              (question, index) => (
+                                <div
+                                  key={question.id}
+                                  className="flex items-center justify-between bg-gray-50 p-3 rounded border"
+                                >
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">
+                                      Q{index + 1}: {question.text}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => removeQuestion(question.id)}
+                                    className="ml-3"
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end space-x-3 pt-4 border-t">
+                      <Button variant="outline" onClick={cancelInterview}>
+                        Cancel
+                      </Button>
                       <Button
-                        onClick={addQuestion}
+                        onClick={saveInterview}
                         className="bg-green-600 hover:bg-green-700"
+                        disabled={
+                          !currentInterview.name ||
+                          !currentInterview.subject ||
+                          !currentInterview.questions?.length
+                        }
                       >
-                        Add Question
+                        Save Interview
                       </Button>
                     </div>
                   </div>
-                </div>
+                </DialogContent>
+              </Dialog>
+            </div>
 
-                {/* Question Suggestions */}
-                {currentInterview.subject && (
-                  <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                    <h3 className="font-semibold text-blue-800 mb-3">
-                      Question Suggestions for {currentInterview.subject}
-                    </h3>
-                    <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-                      {questionSuggestions
-                        .filter((q) => q.subject === currentInterview.subject)
-                        .map((question) => (
-                          <div
-                            key={question.id}
-                            className="flex items-center justify-between bg-white p-3 rounded border hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex-1">
-                              <p className="text-sm">{question.text}</p>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => addSuggestedQuestion(question)}
-                              className="ml-3 text-blue-600 border-blue-300 hover:bg-blue-50"
-                            >
-                              Add
-                            </Button>
-                          </div>
-                        ))}
-                      {questionSuggestions.filter(
-                        (q) => q.subject === currentInterview.subject
-                      ).length === 0 && (
-                        <p className="text-gray-500 text-center py-4">
-                          No suggestions available for this subject.
-                        </p>
-                      )}
+            {/* View Interview Dialog */}
+            <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Interview Details</DialogTitle>
+                  <DialogDescription>
+                    View interview questions and manage interview settings.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {selectedInterview && (
+                  <div className="space-y-6">
+                    {/* Interview Info */}
+                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <h3 className="font-semibold text-gray-800 mb-3">
+                        Interview Information
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-sm text-gray-600">Name:</span>
+                          <p className="font-medium">
+                            {selectedInterview.name}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-sm text-gray-600">
+                            Subject:
+                          </span>
+                          <p className="font-medium">
+                            {selectedInterview.subject}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-sm text-gray-600">
+                            Questions:
+                          </span>
+                          <p className="font-medium">
+                            {selectedInterview.questions.length}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-sm text-gray-600">
+                            Candidates:
+                          </span>
+                          <p className="font-medium text-green-600">
+                            {selectedInterview.candidatesCount}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-sm text-gray-600">
+                            Created:
+                          </span>
+                          <p className="font-medium">
+                            {selectedInterview.createdAt}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Selected Questions */}
-                {currentInterview.questions &&
-                  currentInterview.questions.length > 0 && (
+                    {/* Questions List */}
                     <div className="border border-gray-200 rounded-lg p-4">
                       <h3 className="font-semibold text-gray-800 mb-3">
-                        Selected Questions ({currentInterview.questions.length})
+                        Questions
                       </h3>
-                      <div className="space-y-2">
-                        {currentInterview.questions.map((question, index) => (
+                      <div className="space-y-3">
+                        {selectedInterview.questions.map((question, index) => (
                           <div
                             key={question.id}
-                            className="flex items-center justify-between bg-gray-50 p-3 rounded border"
+                            className="bg-gray-50 p-3 rounded border"
                           >
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">
-                                Q{index + 1}: {question.text}
-                              </p>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => removeQuestion(question.id)}
-                              className="ml-3"
-                            >
-                              Remove
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 pt-4 border-t">
-                  <Button variant="outline" onClick={cancelInterview}>
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={saveInterview}
-                    className="bg-green-600 hover:bg-green-700"
-                    disabled={
-                      !currentInterview.name ||
-                      !currentInterview.subject ||
-                      !currentInterview.questions?.length
-                    }
-                  >
-                    Save Interview
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* View Interview Dialog */}
-        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Interview Details</DialogTitle>
-              <DialogDescription>
-                View interview questions and manage interview settings.
-              </DialogDescription>
-            </DialogHeader>
-
-            {selectedInterview && (
-              <div className="space-y-6">
-                {/* Interview Info */}
-                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <h3 className="font-semibold text-gray-800 mb-3">
-                    Interview Information
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-sm text-gray-600">Name:</span>
-                      <p className="font-medium">{selectedInterview.name}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-600">Subject:</span>
-                      <p className="font-medium">{selectedInterview.subject}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-600">Questions:</span>
-                      <p className="font-medium">
-                        {selectedInterview.questions.length}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-600">Candidates:</span>
-                      <p className="font-medium text-green-600">
-                        {selectedInterview.candidatesCount}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-600">Created:</span>
-                      <p className="font-medium">
-                        {selectedInterview.createdAt}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Questions List */}
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-800 mb-3">
-                    Questions
-                  </h3>
-                  <div className="space-y-3">
-                    {selectedInterview.questions.map((question, index) => (
-                      <div
-                        key={question.id}
-                        className="bg-gray-50 p-3 rounded border"
-                      >
-                        <p className="text-sm font-medium">
-                          Q{index + 1}: {question.text}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-between pt-4 border-t">
-                  <Button
-                    variant="destructive"
-                    onClick={() =>
-                      selectedInterview && deleteInterview(selectedInterview.id)
-                    }
-                  >
-                    Delete Interview
-                  </Button>
-                  <div className="flex space-x-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsViewDialogOpen(false)}
-                    >
-                      Close
-                    </Button>
-                    <Button
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={() => {
-                        setIsViewDialogOpen(false);
-                        if (selectedInterview) {
-                          editInterview(selectedInterview);
-                        }
-                      }}
-                    >
-                      Edit Interview
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Interview Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Interview</DialogTitle>
-              <DialogDescription>
-                Modify interview details and questions.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              {/* Interview Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-interview-name">Interview Name</Label>
-                  <Input
-                    id="edit-interview-name"
-                    placeholder="Enter interview name"
-                    value={currentInterview.name || ""}
-                    onChange={(e) =>
-                      setCurrentInterview((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-subject">Subject</Label>
-                  <Select
-                    value={currentInterview.subject || ""}
-                    onValueChange={(value) =>
-                      setCurrentInterview((prev) => ({
-                        ...prev,
-                        subject: value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjects.map((subject) => (
-                        <SelectItem key={subject} value={subject}>
-                          {subject}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Add Custom Question */}
-              <div className="border border-green-200 rounded-lg p-4 bg-green-50">
-                <h3 className="font-semibold text-green-800 mb-3">
-                  Add Custom Question
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <Label htmlFor="edit-question-text">Question</Label>
-                    <Textarea
-                      id="edit-question-text"
-                      placeholder="Enter your question"
-                      value={currentQuestion.text}
-                      onChange={(e) =>
-                        setCurrentQuestion((prev) => ({
-                          ...prev,
-                          text: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="flex justify-end items-end">
-                    <Button
-                      onClick={addQuestion}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      Add Question
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Question Suggestions */}
-              {currentInterview.subject && (
-                <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                  <h3 className="font-semibold text-blue-800 mb-3">
-                    Question Suggestions for {currentInterview.subject}
-                  </h3>
-                  <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-                    {questionSuggestions
-                      .filter((q) => q.subject === currentInterview.subject)
-                      .map((question) => (
-                        <div
-                          key={question.id}
-                          className="flex items-center justify-between bg-white p-3 rounded border hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex-1">
-                            <p className="text-sm">{question.text}</p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => addSuggestedQuestion(question)}
-                            className="ml-3 text-blue-600 border-blue-300 hover:bg-blue-50"
-                          >
-                            Add
-                          </Button>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Selected Questions */}
-              {currentInterview.questions &&
-                currentInterview.questions.length > 0 && (
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-800 mb-3">
-                      Selected Questions ({currentInterview.questions.length})
-                    </h3>
-                    <div className="space-y-2">
-                      {currentInterview.questions.map((question, index) => (
-                        <div
-                          key={question.id}
-                          className="flex items-center justify-between bg-gray-50 p-3 rounded border"
-                        >
-                          <div className="flex-1">
                             <p className="text-sm font-medium">
                               Q{index + 1}: {question.text}
                             </p>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => removeQuestion(question.id)}
-                            className="ml-3"
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-between pt-4 border-t">
+                      <Button
+                        variant="destructive"
+                        onClick={() =>
+                          selectedInterview &&
+                          deleteInterview(selectedInterview.id)
+                        }
+                      >
+                        Delete Interview
+                      </Button>
+                      <div className="flex space-x-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsViewDialogOpen(false)}
+                        >
+                          Close
+                        </Button>
+                        <Button
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            setIsViewDialogOpen(false);
+                            if (selectedInterview) {
+                              editInterview(selectedInterview);
+                            }
+                          }}
+                        >
+                          Edit Interview
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
+              </DialogContent>
+            </Dialog>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <Button variant="outline" onClick={cancelEdit}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={updateInterview}
-                  className="bg-green-600 hover:bg-green-700"
-                  disabled={
-                    !currentInterview.name ||
-                    !currentInterview.subject ||
-                    !currentInterview.questions?.length
-                  }
-                >
-                  Update Interview
-                </Button>
-              </div>
+            {/* Edit Interview Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Edit Interview</DialogTitle>
+                  <DialogDescription>
+                    Modify interview details and questions.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                  {/* Interview Basic Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-interview-name">
+                        Interview Name
+                      </Label>
+                      <Input
+                        id="edit-interview-name"
+                        placeholder="Enter interview name"
+                        value={currentInterview.name || ""}
+                        onChange={(e) =>
+                          setCurrentInterview((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-subject">Subject</Label>
+                      <Select
+                        value={currentInterview.subject || ""}
+                        onValueChange={(value) =>
+                          setCurrentInterview((prev) => ({
+                            ...prev,
+                            subject: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subjects.map((subject) => (
+                            <SelectItem key={subject} value={subject}>
+                              {subject}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Add Custom Question */}
+                  <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                    <h3 className="font-semibold text-green-800 mb-3">
+                      Add Custom Question
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="edit-question-text">Question</Label>
+                        <Textarea
+                          id="edit-question-text"
+                          placeholder="Enter your question"
+                          value={currentQuestion.text}
+                          onChange={(e) =>
+                            setCurrentQuestion((prev) => ({
+                              ...prev,
+                              text: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="flex justify-end items-end">
+                        <Button
+                          onClick={addQuestion}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Add Question
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Question Suggestions */}
+                  {currentInterview.subject && (
+                    <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                      <h3 className="font-semibold text-blue-800 mb-3">
+                        Question Suggestions for {currentInterview.subject}
+                      </h3>
+                      <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                        {questionSuggestions
+                          .filter((q) => q.subject === currentInterview.subject)
+                          .map((question) => (
+                            <div
+                              key={question.id}
+                              className="flex items-center justify-between bg-white p-3 rounded border hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex-1">
+                                <p className="text-sm">{question.text}</p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => addSuggestedQuestion(question)}
+                                className="ml-3 text-blue-600 border-blue-300 hover:bg-blue-50"
+                              >
+                                Add
+                              </Button>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selected Questions */}
+                  {currentInterview.questions &&
+                    currentInterview.questions.length > 0 && (
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <h3 className="font-semibold text-gray-800 mb-3">
+                          Selected Questions (
+                          {currentInterview.questions.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {currentInterview.questions.map((question, index) => (
+                            <div
+                              key={question.id}
+                              className="flex items-center justify-between bg-gray-50 p-3 rounded border"
+                            >
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">
+                                  Q{index + 1}: {question.text}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => removeQuestion(question.id)}
+                                className="ml-3"
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-end space-x-3 pt-4 border-t">
+                    <Button variant="outline" onClick={cancelEdit}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={updateInterview}
+                      className="bg-green-600 hover:bg-green-700"
+                      disabled={
+                        !currentInterview.name ||
+                        !currentInterview.subject ||
+                        !currentInterview.questions?.length
+                      }
+                    >
+                      Update Interview
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Interviews Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {interviews
+                .filter(
+                  (interview) =>
+                    selectedSubjectFilter === "all" ||
+                    interview.subject === selectedSubjectFilter
+                )
+                .map((interview) => (
+                  <Card
+                    key={interview.id}
+                    className="bg-white shadow-sm border border-green-100 hover:shadow-md transition-shadow flex flex-col"
+                  >
+                    <CardHeader className="pb-3 flex-none">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg text-gray-900">
+                          {interview.name}
+                        </CardTitle>
+                      </div>
+                      <CardDescription className="flex items-center space-x-2">
+                        <BookOpen className="h-4 w-4 text-green-600" />
+                        <span>{interview.subject}</span>
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4 flex-1 flex flex-col justify-end">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Questions:</span>
+                          <span className="font-medium">
+                            {interview.questions.length}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 flex items-center space-x-1">
+                            <Users className="h-4 w-4" />
+                            <span>Candidates:</span>
+                          </span>
+                          <span className="font-medium text-green-600">
+                            {interview.candidatesCount}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Created:</span>
+                          <span className="font-medium">
+                            {interview.createdAt}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex space-x-2 pt-2">
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          onClick={() => viewInterview(interview)}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex items-center"
+                          onClick={() => editInterview(interview)}
+                        >
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      {/* New Action Buttons */}
+                      <div className="flex space-x-2 pt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => copyInterviewLink(interview.id)}
+                        >
+                          {copiedId === interview.id ? (
+                            <>
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Link2 className="h-3 w-3 mr-1" />
+                              Copy Link
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => viewResults(interview.id)}
+                        >
+                          <BarChart3 className="h-3 w-3 mr-1" />
+                          Results
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
             </div>
-          </DialogContent>
-        </Dialog>
 
-        {/* Interviews Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {interviews
-            .filter(
+            {interviews.filter(
               (interview) =>
                 selectedSubjectFilter === "all" ||
                 interview.subject === selectedSubjectFilter
-            )
-            .map((interview) => (
-              <Card
-                key={interview.id}
-                className="bg-white shadow-sm border border-green-100 hover:shadow-md transition-shadow flex flex-col"
-              >
-                <CardHeader className="pb-3 flex-none">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg text-gray-900">
-                      {interview.name}
-                    </CardTitle>
-                  </div>
-                  <CardDescription className="flex items-center space-x-2">
-                    <BookOpen className="h-4 w-4 text-green-600" />
-                    <span>{interview.subject}</span>
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-4 flex-1 flex flex-col justify-end">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Questions:</span>
-                      <span className="font-medium">
-                        {interview.questions.length}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 flex items-center space-x-1">
-                        <Users className="h-4 w-4" />
-                        <span>Candidates:</span>
-                      </span>
-                      <span className="font-medium text-green-600">
-                        {interview.candidatesCount}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Created:</span>
-                      <span className="font-medium">{interview.createdAt}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex space-x-2 pt-2">
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      onClick={() => viewInterview(interview)}
-                    >
-                      View Details
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex items-center"
-                      onClick={() => editInterview(interview)}
-                    >
-                      <Edit3 className="h-3 w-3" />
-                    </Button>
-                  </div>
-
-                  {/* New Action Buttons */}
-                  <div className="flex space-x-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => copyInterviewLink(interview.id)}
-                    >
-                      {copiedId === interview.id ? (
-                        <>
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Link2 className="h-3 w-3 mr-1" />
-                          Copy Link
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => viewResults(interview.id)}
-                    >
-                      <BarChart3 className="h-3 w-3 mr-1" />
-                      Results
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-        </div>
-
-        {interviews.filter(
-          (interview) =>
-            selectedSubjectFilter === "all" ||
-            interview.subject === selectedSubjectFilter
-        ).length === 0 && (
-          <div className="text-center py-12">
-            <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {selectedSubjectFilter === "all"
-                ? "No interviews yet"
-                : `No interviews found for ${selectedSubjectFilter}`}
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {selectedSubjectFilter === "all"
-                ? "Create your first mock interview to get started"
-                : `Create a new interview for ${selectedSubjectFilter} or change the filter`}
-            </p>
-            <Button
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Create Interview
-            </Button>
-          </div>
-        )}
+            ).length === 0 && (
+              <div className="text-center py-12">
+                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {selectedSubjectFilter === "all"
+                    ? "No interviews yet"
+                    : `No interviews found for ${selectedSubjectFilter}`}
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  {selectedSubjectFilter === "all"
+                    ? "Create your first mock interview to get started"
+                    : `Create a new interview for ${selectedSubjectFilter} or change the filter`}
+                </p>
+                <Button
+                  onClick={() => setIsCreateDialogOpen(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Create Interview
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
