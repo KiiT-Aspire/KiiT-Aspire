@@ -329,21 +329,50 @@ const InterviewPage = () => {
     setIsCreateDialogOpen(false);
   };
 
-  const viewInterview = (interview: Interview) => {
-    setSelectedInterview(interview);
-    setIsViewDialogOpen(true);
+  const viewInterview = async (interview: Interview) => {
+    try {
+      // Fetch full interview details with questions
+      const response = await fetch(`/api/interviews/${interview.id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setSelectedInterview({
+          ...interview,
+          questions: data.data.questions || [],
+        });
+        setIsViewDialogOpen(true);
+      } else {
+        toast.error("Failed to load interview details");
+      }
+    } catch (error) {
+      console.error("Error fetching interview details:", error);
+      toast.error("Error loading interview details");
+    }
   };
 
-  const editInterview = (interview: Interview) => {
-    setCurrentInterview({
-      id: interview.id,
-      name: interview.name,
-      subject: interview.subject,
-      questions: interview.questions,
-      candidatesCount: interview.candidatesCount,
-      createdAt: interview.createdAt,
-    });
-    setIsEditDialogOpen(true);
+  const editInterview = async (interview: Interview) => {
+    try {
+      // Fetch full interview details with questions
+      const response = await fetch(`/api/interviews/${interview.id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setCurrentInterview({
+          id: interview.id,
+          name: interview.name,
+          subject: interview.subject,
+          questions: data.data.questions || [],
+          candidatesCount: interview.candidatesCount,
+          createdAt: interview.createdAt,
+        });
+        setIsEditDialogOpen(true);
+      } else {
+        toast.error("Failed to load interview details");
+      }
+    } catch (error) {
+      console.error("Error fetching interview details:", error);
+      toast.error("Error loading interview details");
+    }
   };
 
   const updateInterview = async () => {
