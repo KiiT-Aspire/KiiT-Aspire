@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
 import {
   Dialog,
   DialogContent,
@@ -27,10 +29,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PlusCircle, Edit3, Users, BookOpen } from "lucide-react";
+import { 
+  PlusCircle, 
+  Edit3, 
+  Users, 
+  BookOpen, 
+  Link2, 
+  BarChart3,
+  Loader2,
+  Copy,
+  CheckCircle2
+} from "lucide-react";
 
 interface Question {
-  id: string;
+  id?: string;
   text: string;
   subject: string;
 }
@@ -40,51 +52,18 @@ interface Interview {
   name: string;
   subject: string;
   questions: Question[];
-  candidatesCount: number;
+  questionCount?: number;
+  candidatesCount?: number;
   createdAt: string;
+  isActive?: boolean;
 }
 
 const InterviewPage = () => {
-  const [interviews, setInterviews] = useState<Interview[]>([
-    {
-      id: "1",
-      name: "Software Engineering Fundamentals",
-      subject: "Software Engineering",
-      questions: [
-        {
-          id: "q1",
-          text: "What is the Software Development Life Cycle?",
-          subject: "Software Engineering",
-        },
-        {
-          id: "q2",
-          text: "Explain the difference between Agile and Waterfall methodologies.",
-          subject: "Software Engineering",
-        },
-      ],
-      candidatesCount: 15,
-      createdAt: "2024-08-01",
-    },
-    {
-      id: "2",
-      name: "Cloud Computing Basics",
-      subject: "Cloud Computing",
-      questions: [
-        {
-          id: "q3",
-          text: "What are the main service models in cloud computing?",
-          subject: "Cloud Computing",
-        },
-        {
-          id: "q4",
-          text: "Explain the concept of elasticity in cloud computing.",
-          subject: "Cloud Computing",
-        },
-      ],
-      candidatesCount: 8,
-      createdAt: "2024-08-05",
-    },
-  ]);
+  const router = useRouter();
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string>("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [selectedSubjectFilter, setSelectedSubjectFilter] =
     useState<string>("all");
@@ -104,6 +83,62 @@ const InterviewPage = () => {
   }>({
     text: "",
   });
+
+  // Fetch user session and interviews on mount
+  useEffect(() => {
+    const initializePage = async () => {
+      try {
+        // For development without auth, use a mock user ID
+        const mockUserId = "mock-teacher-id";
+        setUserId(mockUserId);
+        await fetchInterviews(mockUserId);
+      } catch (error) {
+        console.error("Failed to initialize page:", error);
+        // Still load with mock user for development
+        const mockUserId = "mock-teacher-id";
+        setUserId(mockUserId);
+        await fetchInterviews(mockUserId);
+        setLoading(false);
+      }
+    };
+
+    initializePage();
+  }, [router]);
+
+  // Fetch interviews from API
+  const fetchInterviews = async (createdBy?: string) => {
+    try {
+      setLoading(true);
+      const url = createdBy
+        ? `/api/interviews?createdBy=${createdBy}`
+        : "/api/interviews";
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.success) {
+        setInterviews(
+          data.data.map((interview: any) => ({
+            id: interview.id,
+            name: interview.name,
+            subject: interview.subject,
+            questions: interview.questions || [],
+            questionCount: interview.questionCount || interview.questions?.length || 0,
+            candidatesCount: interview.responseCount || 0,
+            createdAt: new Date(interview.createdAt).toLocaleDateString(),
+            isActive: interview.isActive,
+          }))
+        );
+      } else {
+        toast.error("Failed to load interviews");
+      }
+    } catch (error) {
+      console.error("Error fetching interviews:", error);
+      toast.error("Error loading interviews");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const questionSuggestions: Question[] = [
     // Software Engineering Questions
@@ -221,35 +256,67 @@ const InterviewPage = () => {
     }
   };
 
-  const removeQuestion = (questionId: string) => {
+  const removeQuestion = (questionId: string | undefined) => {
+    if (!questionId) return;
     setCurrentInterview((prev) => ({
       ...prev,
       questions: prev.questions?.filter((q) => q.id !== questionId) || [],
     }));
   };
 
-  const saveInterview = () => {
+  const saveInterview = async () => {
     if (
-      currentInterview.name &&
-      currentInterview.subject &&
-      currentInterview.questions?.length
+      !currentInterview.name ||
+      !currentInterview.subject ||
+      !currentInterview.questions?.length ||
+      !userId
     ) {
-      const newInterview: Interview = {
-        id: `int${Date.now()}`,
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    try {
+      const payload = {
         name: currentInterview.name,
         subject: currentInterview.subject,
-        questions: currentInterview.questions,
-        candidatesCount: 0,
-        createdAt: new Date().toISOString().split("T")[0],
+        createdBy: userId,
+        questions: currentInterview.questions.map((q) => ({
+          text: q.text,
+          subject: q.subject,
+        })),
       };
 
-      setInterviews((prev) => [...prev, newInterview]);
-      setCurrentInterview({
-        name: "",
-        subject: "",
-        questions: [],
+      console.log("Sending interview data:", payload);
+
+      const response = await fetch("/api/interviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
-      setIsCreateDialogOpen(false);
+
+      const data = await response.json();
+      console.log("Response:", data);
+
+      if (response.ok && data.success) {
+        toast.success("Interview created successfully!");
+        setCurrentInterview({
+          name: "",
+          subject: "",
+          questions: [],
+        });
+        setIsCreateDialogOpen(false);
+        // Refresh interviews list
+        await fetchInterviews(userId);
+      } else {
+        const errorMessage = data.error || data.message || "Failed to create interview";
+        console.error("Error from API:", errorMessage);
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error("Error creating interview:", error);
+      toast.error("Error creating interview: " + (error as Error).message);
     }
   };
 
@@ -279,34 +346,51 @@ const InterviewPage = () => {
     setIsEditDialogOpen(true);
   };
 
-  const updateInterview = () => {
+  const updateInterview = async () => {
     if (
-      currentInterview.name &&
-      currentInterview.subject &&
-      currentInterview.questions?.length &&
-      currentInterview.id
+      !currentInterview.name ||
+      !currentInterview.subject ||
+      !currentInterview.questions?.length ||
+      !currentInterview.id
     ) {
-      const updatedInterview: Interview = {
-        id: currentInterview.id,
-        name: currentInterview.name,
-        subject: currentInterview.subject,
-        questions: currentInterview.questions,
-        candidatesCount: currentInterview.candidatesCount || 0,
-        createdAt:
-          currentInterview.createdAt || new Date().toISOString().split("T")[0],
-      };
+      toast.error("Please fill all required fields");
+      return;
+    }
 
-      setInterviews((prev) =>
-        prev.map((interview) =>
-          interview.id === currentInterview.id ? updatedInterview : interview
-        )
-      );
-      setCurrentInterview({
-        name: "",
-        subject: "",
-        questions: [],
+    try {
+      const response = await fetch(`/api/interviews/${currentInterview.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: currentInterview.name,
+          subject: currentInterview.subject,
+          questions: currentInterview.questions.map((q) => ({
+            text: q.text,
+            subject: q.subject,
+          })),
+        }),
       });
-      setIsEditDialogOpen(false);
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success("Interview updated successfully!");
+        setCurrentInterview({
+          name: "",
+          subject: "",
+          questions: [],
+        });
+        setIsEditDialogOpen(false);
+        // Refresh interviews list
+        await fetchInterviews(userId);
+      } else {
+        toast.error(data.message || "Failed to update interview");
+      }
+    } catch (error) {
+      console.error("Error updating interview:", error);
+      toast.error("Error updating interview");
     }
   };
 
@@ -319,42 +403,97 @@ const InterviewPage = () => {
     setIsEditDialogOpen(false);
   };
 
-  const deleteInterview = (interviewId: string) => {
-    setInterviews((prev) =>
-      prev.filter((interview) => interview.id !== interviewId)
-    );
-    setIsViewDialogOpen(false);
+  const deleteInterview = async (interviewId: string) => {
+    if (!confirm("Are you sure you want to delete this interview? This will also delete all student responses.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/interviews/${interviewId}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success("Interview deleted successfully!");
+        setIsViewDialogOpen(false);
+        // Refresh interviews list
+        await fetchInterviews(userId);
+      } else {
+        toast.error(data.message || "Failed to delete interview");
+      }
+    } catch (error) {
+      console.error("Error deleting interview:", error);
+      toast.error("Error deleting interview");
+    }
+  };
+
+  // Copy interview link to clipboard
+  const copyInterviewLink = async (interviewId: string) => {
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/interviewee/${interviewId}`;
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedId(interviewId);
+      toast.success("Interview link copied to clipboard!");
+
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedId(null);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy link:", error);
+      toast.error("Failed to copy link");
+    }
+  };
+
+  // Navigate to results page
+  const viewResults = (interviewId: string) => {
+    router.push(`/interview/${interviewId}/results`);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white p-6">
+      <Toaster position="top-right" />
       <div className="max-w-7xl mx-auto">
-        {/* Header with Subject Filter and Create Button */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center space-x-4">
-            <Label
-              htmlFor="subject-filter"
-              className="text-lg font-medium text-gray-700"
-            >
-              Filter by Subject:
-            </Label>
-            <Select
-              value={selectedSubjectFilter}
-              onValueChange={setSelectedSubjectFilter}
-            >
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="All Subjects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Subjects</SelectItem>
-                {subjects.map((subject) => (
-                  <SelectItem key={subject} value={subject}>
-                    {subject}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+              <p className="text-gray-600">Loading interviews...</p>
+            </div>
           </div>
+        ) : (
+          <>
+            {/* Header with Subject Filter and Create Button */}
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-4">
+                <Label
+                  htmlFor="subject-filter"
+                  className="text-lg font-medium text-gray-700"
+                >
+                  Filter by Subject:
+                </Label>
+                <Select
+                  value={selectedSubjectFilter}
+                  onValueChange={setSelectedSubjectFilter}
+                >
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="All Subjects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Subjects</SelectItem>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject} value={subject}>
+                        {subject}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
           <Dialog
             open={isCreateDialogOpen}
@@ -875,6 +1014,37 @@ const InterviewPage = () => {
                       <Edit3 className="h-3 w-3" />
                     </Button>
                   </div>
+
+                  {/* New Action Buttons */}
+                  <div className="flex space-x-2 pt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => copyInterviewLink(interview.id)}
+                    >
+                      {copiedId === interview.id ? (
+                        <>
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Link2 className="h-3 w-3 mr-1" />
+                          Copy Link
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => viewResults(interview.id)}
+                    >
+                      <BarChart3 className="h-3 w-3 mr-1" />
+                      Results
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -907,6 +1077,8 @@ const InterviewPage = () => {
               Create Interview
             </Button>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

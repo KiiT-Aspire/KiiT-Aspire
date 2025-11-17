@@ -21,13 +21,7 @@ const IntervieweePage = () => {
   // Form state
   const [studentName, setStudentName] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
-  const [showNameForm, setShowNameForm] = useState(false);
-  const [isLoadingInterview, setIsLoadingInterview] = useState(true);
-  const [interviewDetails, setInterviewDetails] = useState<{
-    name: string;
-    subject: string;
-    questionCount: number;
-  } | null>(null);
+  const [showNameForm, setShowNameForm] = useState(true);
   
   // Interview state
   const [responseId, setResponseId] = useState<string>("");
@@ -45,50 +39,10 @@ const IntervieweePage = () => {
   const [evaluation, setEvaluation] = useState<string>("");
   const [score, setScore] = useState<number>(0);
   const [questionsAsked, setQuestionsAsked] = useState<string[]>([]);
-  const [recordedAudioDuration, setRecordedAudioDuration] = useState<number>(0);
   
   const recorderRef = useRef<any>({});
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-
-  // Fetch interview details on mount
-  useEffect(() => {
-    const fetchInterviewDetails = async () => {
-      if (!interviewId) {
-        toast.error("Invalid interview link");
-        setIsLoadingInterview(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/interviews/${interviewId}`);
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            setInterviewDetails({
-              name: result.data.name,
-              subject: result.data.subject,
-              questionCount: result.data.questions?.length || 0,
-            });
-            setInterviewName(result.data.name);
-            setShowNameForm(true);
-          } else {
-            toast.error("Interview not found");
-          }
-        } else {
-          toast.error("Interview not found or inactive");
-        }
-      } catch (error) {
-        console.error("Error fetching interview:", error);
-        toast.error("Failed to load interview details");
-      } finally {
-        setIsLoadingInterview(false);
-      }
-    };
-
-    fetchInterviewDetails();
-  }, [interviewId]);
 
   // Start interview function
   const startInterview = useCallback(async () => {
@@ -178,45 +132,20 @@ const IntervieweePage = () => {
             );
 
             const result = await apiResponse.json();
-            
-            console.log("API Response:", result);
 
             if (result.success) {
               if (result.data.interviewComplete) {
                 setInterviewComplete(true);
                 setEvaluation(result.data.evaluation || "");
                 setScore(result.data.score || 0);
-                
-                // Call complete endpoint to finalize the interview
-                try {
-                  await fetch(
-                    `/api/interviews/${interviewId}/responses/${responseId}/complete`,
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        score: result.data.score || 0,
-                        evaluation: result.data.evaluation || "",
-                      }),
-                    }
-                  );
-                } catch (completeError) {
-                  console.error("Error calling complete endpoint:", completeError);
-                  // Don't show error to user as the interview is already marked complete
-                }
-                
                 toast.success("Interview completed!");
               } else if (result.data.nextQuestion) {
                 setCurrentQuestion(result.data.nextQuestion);
                 setQuestionCount((prev) => prev + 1);
                 setQuestionsAsked((prev) => [...prev, result.data.nextQuestion]);
                 toast.success("Answer recorded!");
-              } else {
-                console.warn("No nextQuestion or interviewComplete in response:", result.data);
-                toast.error("Unexpected response from server");
               }
             } else {
-              console.error("API returned error:", result);
               toast.error(result.message || "Failed to process answer");
             }
           } catch (error) {
@@ -291,72 +220,19 @@ const IntervieweePage = () => {
     };
   }, [currentStatus]);
 
-
   // Show name/email form
-  if (isLoadingInterview) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-6">
-        <Toaster position="top-right" />
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading interview details...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!interviewDetails) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-white flex items-center justify-center p-6">
-        <Toaster position="top-right" />
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center text-red-600">Interview Not Found</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-gray-600 mb-4">
-              This interview link is invalid or the interview may have been deleted.
-            </p>
-            <p className="text-sm text-gray-500">
-              Please check the link and try again, or contact your interviewer.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   if (showNameForm) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-6">
         <Toaster position="top-right" />
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl text-center">{interviewDetails.name}</CardTitle>
-            <div className="text-center mt-2 space-y-1">
-              <p className="text-gray-600">Subject: <span className="font-medium">{interviewDetails.subject}</span></p>
-              <p className="text-sm text-gray-500">
-                {interviewDetails.questionCount} question{interviewDetails.questionCount !== 1 ? 's' : ''} available
-              </p>
-            </div>
+            <CardTitle className="text-2xl text-center">Welcome to the Interview</CardTitle>
+            <p className="text-center text-gray-600 mt-2">
+              Please enter your details to begin
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <p className="text-sm text-gray-700 mb-2">
-                <strong>Before you begin:</strong>
-              </p>
-              <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
-                <li>This is an AI-powered adaptive interview</li>
-                <li>You'll be asked 2-4 questions based on your responses</li>
-                <li>Use spacebar to record your answers</li>
-                <li>Take your time and answer thoughtfully</li>
-              </ul>
-            </div>
-            
             <div>
               <Label htmlFor="name">Full Name</Label>
               <Input
@@ -453,46 +329,16 @@ const IntervieweePage = () => {
                 console.log("Recording stopped:", { blobUrl, blob });
                 setCurrentMediaUrl(blobUrl);
                 
-                // Store audio duration for later submission
                 const audio = new Audio(blobUrl);
                 audio.onloadedmetadata = () => {
                   const duration = Math.floor(audio.duration);
-                  setRecordedAudioDuration(duration);
                   setAudioDuration(duration);
+                  sendAudioToAPI(blobUrl, duration);
                 };
               }}
-              render={({ status, startRecording, stopRecording, mediaBlobUrl, clearBlobUrl }) => {
-                recorderRef.current = { startRecording, stopRecording, status, clearBlobUrl };
+              render={({ status, startRecording, stopRecording }) => {
+                recorderRef.current = { startRecording, stopRecording, status };
                 setCurrentStatus(status);
-
-                const handleSubmitAnswer = async () => {
-                  if (!mediaBlobUrl) {
-                    toast.error("No audio recording available");
-                    return;
-                  }
-                  
-                  console.log("Submitting audio:", {
-                    url: mediaBlobUrl,
-                    duration: recordedAudioDuration,
-                    responseId,
-                    interviewId
-                  });
-                  
-                  await sendAudioToAPI(mediaBlobUrl, recordedAudioDuration);
-                  
-                  // Clear the recording UI after successful submission
-                  if (clearBlobUrl) {
-                    clearBlobUrl();
-                  }
-                  setCurrentMediaUrl("");
-                  setRecordedAudioDuration(0);
-                };
-
-                const handleClearRecording = () => {
-                  if (clearBlobUrl) clearBlobUrl();
-                  setCurrentMediaUrl("");
-                  setRecordedAudioDuration(0);
-                };
 
                 return (
                   <div className="space-y-4">
@@ -525,50 +371,9 @@ const IntervieweePage = () => {
                       </p>
                     </div>
 
-                    <div className="text-center text-sm text-gray-500">
-                      <p>• Hold SPACEBAR to start recording your answer</p>
-                      <p>• Release SPACEBAR to stop recording</p>
-                      <p>• Click Submit Answer to get the next question</p>
-                    </div>
-
-                    {mediaBlobUrl && (
-                      <div className="mt-6">
-                        <h3 className="text-lg font-semibold mb-2">Your Recording:</h3>
-                        {recordedAudioDuration > 0 && (
-                          <p className="text-sm text-gray-600 mb-2">
-                            Duration: {Math.floor(recordedAudioDuration)}s
-                          </p>
-                        )}
-                        <audio 
-                          ref={audioRef} 
-                          src={mediaBlobUrl} 
-                          controls 
-                          className="w-full mb-4"
-                          onLoadedMetadata={() => {
-                            if (audioRef.current && audioRef.current.duration) {
-                              setAudioDuration(audioRef.current.duration);
-                            }
-                          }}
-                        />
-
-                        <div className="flex justify-center gap-4">
-                          <Button
-                            onClick={handleSubmitAnswer}
-                            disabled={isProcessing || !mediaBlobUrl}
-                            className="px-6 py-2 bg-green-600 hover:bg-green-700"
-                          >
-                            {isProcessing ? "Processing..." : "Submit Answer"}
-                          </Button>
-
-                          <Button
-                            onClick={handleClearRecording}
-                            disabled={isProcessing}
-                            variant="outline"
-                            className="px-6 py-2"
-                          >
-                            Record Again
-                          </Button>
-                        </div>
+                    {currentMediaUrl && (
+                      <div className="mt-4">
+                        <audio ref={audioRef} src={currentMediaUrl} controls className="w-full" />
                       </div>
                     )}
                   </div>
@@ -583,4 +388,3 @@ const IntervieweePage = () => {
 };
 
 export default IntervieweePage;
-
