@@ -3,35 +3,15 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Loader2,
-  ArrowLeft,
-  User,
-  Calendar,
-  Award,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Download,
-  Eye,
-  TrendingUp,
+  Loader2, ArrowLeft, User, Calendar, Award, Clock,
+  CheckCircle2, XCircle, AlertCircle, Download, Eye,
+  TrendingUp, BarChart3, Users, Activity, ChevronLeft,
+  ChevronRight, AudioWaveform, Filter
 } from "lucide-react";
 
 interface ResponseData {
@@ -42,7 +22,7 @@ interface ResponseData {
   status: "in_progress" | "completed" | "abandoned";
   startedAt: string;
   completedAt: string | null;
-  timeTaken: number | null; // in seconds
+  timeTaken: number | null;
 }
 
 interface Statistics {
@@ -54,6 +34,47 @@ interface Statistics {
   completionRate: number;
 }
 
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+};
+const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.07 } } };
+
+function StatusBadge({ status }: { status: string }) {
+  const config = {
+    completed: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20", icon: CheckCircle2, label: "Completed" },
+    in_progress: { bg: "bg-indigo-500/10", text: "text-indigo-400", border: "border-indigo-500/20", icon: Activity, label: "In Progress" },
+    abandoned: { bg: "bg-zinc-500/10", text: "text-zinc-500", border: "border-zinc-500/20", icon: XCircle, label: "Abandoned" },
+  }[status] || { bg: "bg-zinc-500/10", text: "text-zinc-400", border: "border-zinc-500/20", icon: AlertCircle, label: status };
+
+  const Icon = config.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${config.bg} ${config.text} ${config.border}`}>
+      <Icon className="w-3 h-3" />
+      {config.label}
+    </span>
+  );
+}
+
+function ScoreBar({ score }: { score: number | null }) {
+  if (score === null) return <span className="text-zinc-600 font-mono text-[13px]">—</span>;
+  const color = score >= 75 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-red-500";
+  const textColor = score >= 75 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400";
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className={`font-mono font-bold text-[13px] w-8 text-right ${textColor}`}>{score}</span>
+      <div className="w-20 h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+        <motion.div
+          className={`h-full rounded-full ${color}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${score}%` }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
@@ -61,6 +82,7 @@ export default function ResultsPage() {
 
   const [responses, setResponses] = useState<ResponseData[]>([]);
   const [interviewName, setInterviewName] = useState<string>("");
+  const [interviewSubject, setInterviewSubject] = useState<string>("");
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -70,44 +92,30 @@ export default function ResultsPage() {
   const limit = 20;
 
   useEffect(() => {
-    if (interviewId) {
-      fetchInterview();
-      fetchResponses();
-    }
+    if (interviewId) { fetchInterview(); fetchResponses(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interviewId, statusFilter, sortBy, currentPage]);
+  }, [interviewId, statusFilter, currentPage]);
 
   const fetchInterview = async () => {
     try {
-      const response = await fetch(`/api/interviews/${interviewId}`);
-      const data = await response.json();
+      const res = await fetch(`/api/interviews/${interviewId}`);
+      const data = await res.json();
       if (data.success) {
         setInterviewName(data.data.name);
+        setInterviewSubject(data.data.subject);
       }
-    } catch (error) {
-      console.error("Error fetching interview:", error);
-    }
+    } catch {}
   };
 
   const fetchResponses = async () => {
     try {
       setLoading(true);
-      const queryParams = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: limit.toString(),
-      });
-
-      if (statusFilter !== "all") {
-        queryParams.append("status", statusFilter);
-      }
-
-      const response = await fetch(
-        `/api/interviews/${interviewId}/responses?${queryParams}`
-      );
-      const data = await response.json();
-
+      const qp = new URLSearchParams({ page: currentPage.toString(), limit: limit.toString() });
+      if (statusFilter !== "all") qp.append("status", statusFilter);
+      const res = await fetch(`/api/interviews/${interviewId}/responses?${qp}`);
+      const data = await res.json();
       if (data.success) {
-        const mappedResponses = (data.data || []).map((r: any) => ({
+        setResponses(data.data.map((r: any) => ({
           id: r.id,
           studentName: r.studentName,
           studentEmail: r.studentEmail,
@@ -118,311 +126,249 @@ export default function ResultsPage() {
           timeTaken: r.completedAt && r.startedAt
             ? Math.floor((new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()) / 1000)
             : null,
-        }));
-
-        setResponses(mappedResponses);
+        })));
         setStatistics({
           totalResponses: data.statistics?.totalResponses || 0,
           completedCount: data.statistics?.completedCount || 0,
           inProgressCount: data.statistics?.inProgressCount || 0,
           abandonedCount: data.statistics?.abandonedCount || 0,
-          averageScore: data.statistics?.averageScore 
-            ? parseFloat(data.statistics.averageScore) 
-            : 0,
+          averageScore: data.statistics?.averageScore ? parseFloat(data.statistics.averageScore) : 0,
           completionRate: data.statistics?.totalResponses
-            ? (data.statistics.completedCount / data.statistics.totalResponses) * 100
-            : 0,
+            ? (data.statistics.completedCount / data.statistics.totalResponses) * 100 : 0,
         });
         setTotalPages(data.pagination?.totalPages || 1);
-      } else {
-        toast.error(data.error || "Failed to load results");
       }
-    } catch (error) {
-      toast.error("Error loading results");
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error("Error loading results"); }
+    finally { setLoading(false); }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return (
-          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-            <CheckCircle2 className="h-3 w-3 mr-1" /> Completed
-          </Badge>
-        );
-      case "in_progress":
-        return (
-          <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
-            <AlertCircle className="h-3 w-3 mr-1" /> In Progress
-          </Badge>
-        );
-      case "abandoned":
-        return (
-          <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/20">
-            <XCircle className="h-3 w-3 mr-1" /> Abandoned
-          </Badge>
-        );
-      default:
-        return <Badge>{status}</Badge>;
-    }
+  const formatDuration = (s: number | null) => {
+    if (!s) return "—";
+    return `${Math.floor(s / 60)}m ${s % 60}s`;
   };
 
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "--";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
-  };
-
-  const exportToCSV = () => {
-    if (!responses.length) {
-      toast.error("No data to export");
-      return;
-    }
-    const headers = [
-      "Student Name", "Email", "Score", "Status", "Started At", "Completed At", "Time Taken (seconds)"
+  const exportCSV = () => {
+    if (!responses.length) { toast.error("No data to export"); return; }
+    const rows = [
+      ["Name", "Email", "Score", "Status", "Started", "Completed", "Duration (s)"].join(","),
+      ...responses.map(r => [r.studentName, r.studentEmail, r.score ?? "", r.status, new Date(r.startedAt).toLocaleString(), r.completedAt ? new Date(r.completedAt).toLocaleString() : "", r.timeTaken ?? ""].join(","))
     ];
-    const csvRows = [
-      headers.join(","),
-      ...responses.map((r) =>
-        [
-          r.studentName,
-          r.studentEmail,
-          r.score ?? "N/A",
-          r.status,
-          new Date(r.startedAt).toLocaleString(),
-          r.completedAt ? new Date(r.completedAt).toLocaleString() : "N/A",
-          r.timeTaken ?? "N/A",
-        ].join(",")
-      ),
-    ];
-    const csvContent = csvRows.join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `interview-${interviewId}-results.csv`;
-    a.click();
+    const a = document.createElement("a"); a.href = url; a.download = `echograde-${interviewId}.csv`; a.click();
     URL.revokeObjectURL(url);
-    toast.success("Results exported successfully!");
+    toast.success("CSV exported!");
   };
 
-  const sortedResponses = [...responses].sort((a, b) => {
-    switch (sortBy) {
-      case "score":
-        return (b.score ?? 0) - (a.score ?? 0);
-      case "date":
-      default:
-        return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
-    }
+  const sorted = [...responses].sort((a, b) => {
+    if (sortBy === "score") return (b.score ?? 0) - (a.score ?? 0);
+    return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 p-6 sm:p-10">
-      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] -z-10 opacity-20" />
-      <Toaster position="top-right" toastOptions={{ style: { background: '#1e293b', color: '#f8fafc', border: '1px solid #334155' } }} />
-      
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-          <div>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/interview")}
-              className="mb-6 bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Overview
-            </Button>
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-1">
-              Performance Dashboard
-            </h1>
-            <p className="text-slate-400">{interviewName || "Loading..."}</p>
-          </div>
-          <Button onClick={exportToCSV} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-        </div>
+    <div className="min-h-screen bg-[#020202] text-foreground selection:bg-indigo-500/20">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-600/[0.04] blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-violet-600/[0.03] blur-[100px] rounded-full" />
+      </div>
 
-        {statistics && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
-              <CardHeader className="pb-2">
-                <CardDescription className="text-slate-400">Total Attempts</CardDescription>
-                <CardTitle className="text-4xl text-slate-100 font-mono">
-                  {statistics.totalResponses}
-                </CardTitle>
-              </CardHeader>
-            </Card>
+      <Toaster position="bottom-right" toastOptions={{ style: { background: "#111", color: "#fff", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }, duration: 3000 }} />
 
-            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
-              <CardHeader className="pb-2">
-                <CardDescription className="text-slate-400">Average Score</CardDescription>
-                <CardTitle className="text-4xl text-emerald-400 font-mono flex items-center">
-                  {typeof statistics.averageScore === 'number' && !isNaN(statistics.averageScore) && statistics.averageScore > 0
-                    ? statistics.averageScore.toFixed(1)
-                    : "--"}
-                  {typeof statistics.averageScore === 'number' && !isNaN(statistics.averageScore) && statistics.averageScore > 0 && (
-                    <TrendingUp className="h-6 w-6 ml-2 text-emerald-500 opacity-50" />
-                  )}
-                </CardTitle>
-              </CardHeader>
-            </Card>
+      <div className="relative z-10 max-w-[1200px] mx-auto px-6 py-8 lg:px-10 lg:py-10 space-y-8">
 
-            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
-              <CardHeader className="pb-2">
-                <CardDescription className="text-slate-400">Completion Rate</CardDescription>
-                <CardTitle className="text-4xl text-cyan-400 font-mono">
-                  {typeof statistics.completionRate === 'number' && !isNaN(statistics.completionRate)
-                    ? statistics.completionRate.toFixed(0)
-                    : "0"}%
-                </CardTitle>
-              </CardHeader>
-            </Card>
+        {/* Header */}
+        <motion.div initial="hidden" animate="visible" variants={stagger}>
+          <motion.button
+            variants={fadeUp}
+            onClick={() => router.push("/interview")}
+            className="flex items-center gap-2 text-[13px] font-medium text-zinc-500 hover:text-white transition-colors mb-5 group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+            Back to Evaluations
+          </motion.button>
 
-            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
-              <CardHeader className="pb-2">
-                <CardDescription className="text-slate-400">Status Snapshot</CardDescription>
-                <div className="mt-2 space-y-2 text-sm">
-                  <div className="flex justify-between border-b border-slate-800 pb-1">
-                    <span className="text-emerald-400">Completed</span>
-                    <span className="font-mono text-slate-300">{statistics.completedCount}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-800 pb-1">
-                    <span className="text-indigo-400">In Progress</span>
-                    <span className="font-mono text-slate-300">{statistics.inProgressCount}</span>
-                  </div>
-                  <div className="flex justify-between pb-1">
-                    <span className="text-slate-500">Abandoned</span>
-                    <span className="font-mono text-slate-300">{statistics.abandonedCount}</span>
-                  </div>
+          <motion.div variants={fadeUp} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+            <div>
+              <div className="flex items-center gap-2.5 mb-1.5">
+                <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+                  <BarChart3 className="w-4 h-4 text-white" />
                 </div>
-              </CardHeader>
-            </Card>
-          </div>
+                <h1 className="text-[26px] font-bold tracking-tight text-white">Results</h1>
+              </div>
+              <p className="text-zinc-500 text-[14px]">{interviewName || "Loading…"} {interviewSubject && `· ${interviewSubject}`}</p>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={exportCSV}
+              className="flex items-center gap-2 h-10 px-5 rounded-[11px] border border-white/[0.08] bg-white/[0.03] text-[13px] font-semibold text-zinc-300 hover:text-white hover:bg-white/[0.06] transition-all"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </motion.button>
+          </motion.div>
+        </motion.div>
+
+        {/* Stats Grid */}
+        {statistics && (
+          <motion.div initial="hidden" animate="visible" variants={stagger} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: "Total Attempts", value: statistics.totalResponses, icon: Users, color: "from-indigo-600/15 to-violet-600/15", border: "border-indigo-500/15", iconBg: "bg-indigo-500/15", iconColor: "text-indigo-400" },
+              { label: "Avg Score", value: (statistics.averageScore && !isNaN(statistics.averageScore) && statistics.averageScore > 0) ? `${statistics.averageScore.toFixed(1)}` : "—", icon: Award, color: "from-emerald-600/15 to-teal-600/15", border: "border-emerald-500/15", iconBg: "bg-emerald-500/15", iconColor: "text-emerald-400" },
+              { label: "Completion Rate", value: `${statistics.completionRate.toFixed(0)}%`, icon: TrendingUp, color: "from-cyan-600/15 to-blue-600/15", border: "border-cyan-500/15", iconBg: "bg-cyan-500/15", iconColor: "text-cyan-400" },
+              { label: "Completed", value: statistics.completedCount, icon: CheckCircle2, color: "from-violet-600/15 to-pink-600/15", border: "border-violet-500/15", iconBg: "bg-violet-500/15", iconColor: "text-violet-400" },
+            ].map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <motion.div key={i} variants={fadeUp} className={`rounded-[16px] border ${stat.border} bg-gradient-to-br ${stat.color} p-5`}>
+                  <div className={`w-9 h-9 rounded-[10px] ${stat.iconBg} flex items-center justify-center mb-3`}>
+                    <Icon className={`w-4.5 h-4.5 ${stat.iconColor}`} />
+                  </div>
+                  <p className="text-[24px] font-bold text-white tracking-tight">{stat.value}</p>
+                  <p className="text-[12px] text-zinc-500 mt-0.5">{stat.label}</p>
+                </motion.div>
+              );
+            })}
+          </motion.div>
         )}
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/50 p-4 border border-slate-800 rounded-xl backdrop-blur-sm">
-          <div className="flex gap-4 w-full sm:w-auto">
-            <div className="flex-1 sm:flex-none">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-2 block mb-1">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-40 bg-slate-950 border-slate-700 text-slate-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="abandoned">Abandoned</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex-1 sm:flex-none">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-2 block mb-1">Sort</label>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full sm:w-40 bg-slate-950 border-slate-700 text-slate-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="score">Score</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        {/* Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col sm:flex-row gap-3 items-start sm:items-center"
+        >
+          <div className="flex items-center gap-2 text-[12px] font-semibold text-zinc-500 uppercase tracking-wider">
+            <Filter className="w-3.5 h-3.5" />
+            Filter
           </div>
-        </div>
+          <div className="flex gap-3">
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-36 h-9 bg-black/60 border-white/[0.08] text-[13px] text-zinc-300 rounded-[10px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#111] border-white/[0.08] text-white rounded-[12px]">
+                <SelectItem value="all" className="text-[13px] focus:bg-indigo-500/10">All Status</SelectItem>
+                <SelectItem value="completed" className="text-[13px] focus:bg-indigo-500/10">Completed</SelectItem>
+                <SelectItem value="in_progress" className="text-[13px] focus:bg-indigo-500/10">In Progress</SelectItem>
+                <SelectItem value="abandoned" className="text-[13px] focus:bg-indigo-500/10">Abandoned</SelectItem>
+              </SelectContent>
+            </Select>
 
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-36 h-9 bg-black/60 border-white/[0.08] text-[13px] text-zinc-300 rounded-[10px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#111] border-white/[0.08] text-white rounded-[12px]">
+                <SelectItem value="date" className="text-[13px] focus:bg-indigo-500/10">Newest First</SelectItem>
+                <SelectItem value="score" className="text-[13px] focus:bg-indigo-500/10">Highest Score</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </motion.div>
+
+        {/* Table */}
         {loading ? (
-          <div className="flex items-center justify-center min-h-[40vh]">
-             <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
+          <div className="flex items-center justify-center py-32">
+            <div className="w-10 h-10 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
           </div>
-        ) : sortedResponses.length === 0 ? (
-          <Card className="py-20 text-center bg-slate-900/40 border-slate-800 border-dashed rounded-3xl">
-            <div className="bg-slate-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <User className="h-10 w-10 text-slate-500" />
+        ) : sorted.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[20px] border border-dashed border-white/[0.06] bg-white/[0.01] py-32 flex flex-col items-center justify-center"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-4">
+              <Users className="w-7 h-7 text-zinc-600" />
             </div>
-            <h3 className="text-xl font-medium text-slate-200 mb-2">No data available</h3>
-            <p className="text-slate-500">No candidates have taken this interview yet.</p>
-          </Card>
+            <h3 className="text-[16px] font-bold text-white mb-1">No candidates yet</h3>
+            <p className="text-zinc-600 text-[13px]">Share your interview link to start receiving submissions.</p>
+          </motion.div>
         ) : (
-          <Card className="bg-slate-900/80 border-slate-800 overflow-hidden">
-            <CardHeader className="border-b border-slate-800 bg-slate-900/50 pb-4">
-               <CardTitle className="text-lg text-slate-200">Candidate Records</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-900 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-800">
-                    <tr>
-                      <th className="p-4 font-medium">Candidate</th>
-                      <th className="p-4 font-medium">Contact</th>
-                      <th className="p-4 font-medium text-center">Score</th>
-                      <th className="p-4 font-medium text-center">Status</th>
-                      <th className="p-4 font-medium">Timeline</th>
-                      <th className="p-4 font-medium text-center">Duration</th>
-                      <th className="p-4 font-medium text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/50 text-sm">
-                    {sortedResponses.map((response) => (
-                      <tr
-                        key={response.id}
-                        className="hover:bg-slate-800/50 cursor-pointer transition-colors group"
-                        onClick={() => router.push(`/interview/${interviewId}/results/${response.id}`)}
-                      >
-                        <td className="p-4 flex items-center gap-3 text-slate-200 font-medium">
-                          <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition-colors">
-                            <User className="h-4 w-4" />
-                          </div>
-                          {response.studentName}
-                        </td>
-                        <td className="p-4 text-slate-400">{response.studentEmail}</td>
-                        <td className="p-4 text-center">
-                          {response.score !== null ? (
-                            <Badge className="bg-emerald-500/10 text-emerald-400 font-mono">
-                              <Award className="h-3 w-3 mr-1" />
-                              {response.score}
-                            </Badge>
-                          ) : (
-                            <span className="text-slate-600 font-mono">--</span>
-                          )}
-                        </td>
-                        <td className="p-4 text-center">{getStatusBadge(response.status)}</td>
-                        <td className="p-4">
-                          <div className="text-slate-400 font-mono text-xs space-y-1">
-                            <div className="flex items-center"><Calendar className="h-3 w-3 mr-1" /> {new Date(response.startedAt).toLocaleDateString()}</div>
-                            <div className="flex items-center"><Clock className="h-3 w-3 mr-1" /> {new Date(response.startedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                          </div>
-                        </td>
-                        <td className="p-4 text-center text-slate-400 font-mono text-xs">
-                           {formatDuration(response.timeTaken)}
-                        </td>
-                        <td className="p-4 text-center">
-                          <Button size="sm" variant="ghost" className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10">
-                            <Eye className="h-4 w-4 mr-2" /> View
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {totalPages > 1 && (
-                <div className="flex justify-between items-center p-4 border-t border-slate-800 bg-slate-900/50 text-slate-400">
-                  <span className="text-xs">Page {currentPage} of {totalPages}</span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="bg-slate-900 border-slate-700" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
-                    <Button variant="outline" size="sm" className="bg-slate-900 border-slate-700" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</Button>
-                  </div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-[20px] border border-white/[0.07] bg-[#0a0a0a] overflow-hidden">
+            {/* Table header */}
+            <div className="grid grid-cols-[1fr_1fr_120px_130px_120px_100px_80px] gap-4 px-5 py-3.5 border-b border-white/[0.06] bg-white/[0.02]">
+              {["Candidate", "Email", "Score", "Status", "Date", "Duration", ""].map((h, i) => (
+                <div key={i} className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">{h}</div>
+              ))}
+            </div>
+
+            {/* Table rows */}
+            <div className="divide-y divide-white/[0.04]">
+              <AnimatePresence>
+                {sorted.map((r, i) => (
+                  <motion.div
+                    key={r.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    onClick={() => router.push(`/interview/${interviewId}/results/${r.id}`)}
+                    className="grid grid-cols-[1fr_1fr_120px_130px_120px_100px_80px] gap-4 px-5 py-4 hover:bg-white/[0.03] cursor-pointer transition-colors group items-center"
+                  >
+                    {/* Candidate */}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center shrink-0 text-[12px] font-bold text-indigo-400">
+                        {r.studentName?.[0]?.toUpperCase() || "?"}
+                      </div>
+                      <span className="text-[13px] font-semibold text-white truncate">{r.studentName || "—"}</span>
+                    </div>
+
+                    {/* Email */}
+                    <div className="text-[13px] text-zinc-500 truncate">{r.studentEmail || "—"}</div>
+
+                    {/* Score */}
+                    <div><ScoreBar score={r.score} /></div>
+
+                    {/* Status */}
+                    <div><StatusBadge status={r.status} /></div>
+
+                    {/* Date */}
+                    <div className="text-[12px] text-zinc-500 font-mono">
+                      {new Date(r.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      <br />
+                      {new Date(r.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+
+                    {/* Duration */}
+                    <div className="text-[12px] text-zinc-500 font-mono">{formatDuration(r.timeTaken)}</div>
+
+                    {/* Action */}
+                    <div className="flex justify-end">
+                      <span className="flex items-center gap-1 text-[12px] font-medium text-zinc-500 group-hover:text-indigo-400 group-hover:bg-indigo-500/10 px-2.5 py-1.5 rounded-[8px] transition-all">
+                        <Eye className="w-3.5 h-3.5" />
+                        View
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-5 py-4 border-t border-white/[0.06] bg-white/[0.01]">
+                <span className="text-[12px] text-zinc-600">Page {currentPage} of {totalPages}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="w-8 h-8 rounded-[8px] border border-white/[0.08] bg-white/[0.02] flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 transition-all"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="w-8 h-8 rounded-[8px] border border-white/[0.08] bg-white/[0.02] flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 transition-all"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </motion.div>
         )}
       </div>
     </div>

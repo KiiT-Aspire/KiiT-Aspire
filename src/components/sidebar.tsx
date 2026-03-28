@@ -1,72 +1,185 @@
 "use client";
 
-import { BrainCircuit, Settings, FileText, BarChart3, LogOut, Home } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  AudioWaveform, FileText, BarChart3, Settings, Home,
+  LogOut, ChevronLeft, ChevronRight
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
-const Sidebar = () => {
+const menuItems = [
+  { icon: Home, label: "Overview", href: "/", isExternal: true },
+  { icon: FileText, label: "Interviews", href: "/interview" },
+  { icon: BarChart3, label: "Analytics", href: "/analytics" },
+  { icon: Settings, label: "Settings", href: "/settings" },
+];
+
+export default function Sidebar() {
   const pathname = usePathname();
-
-  const menuItems = [
-    { icon: <Home size={20} />, label: "Overview", href: "/", isExternal: true },
-    { icon: <FileText size={20} />, label: "Interviews", href: "/interview", isExternal: false },
-    { icon: <BarChart3 size={20} />, label: "Results", href: "/results", isExternal: false },
-    { icon: <Settings size={20} />, label: "Settings", href: "/settings", isExternal: false },
-  ];
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="fixed top-0 left-0 flex-col h-full bg-slate-950 w-16 md:w-64 border-r border-slate-800 z-50 flex justify-between">
-      
-      {/* Top Section */}
-      <div>
-        <div className="p-4 md:p-6 flex items-center justify-center md:justify-start gap-3 border-b border-slate-800/50 mb-4 h-20">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-cyan-400 p-[2px] shadow-lg shadow-indigo-500/20 shrink-0">
-            <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-              <BrainCircuit className="w-5 h-5 text-indigo-400" />
-            </div>
+    <motion.div
+      initial={{ x: -20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className={`fixed top-0 left-0 flex flex-col h-full bg-[#060606] border-r border-white/[0.06] z-50 transition-all duration-300 ${
+        collapsed ? "w-16" : "w-[220px]"
+      }`}
+    >
+      {/* Logo area */}
+      <div className="flex items-center justify-between px-4 h-[60px] border-b border-white/[0.05]">
+        <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
+          <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.35)]">
+            <AudioWaveform className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="hidden md:block text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-            Aspire
-          </span>
-        </div>
-
-        {/* Menu items */}
-        <div className="flex flex-col px-3 md:px-4 space-y-2">
-          {menuItems.map((item, index) => {
-            const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/");
-            return (
-              <Link
-                href={item.href}
-                key={index}
-                className={`flex items-center justify-center md:justify-start gap-3 p-3 w-full rounded-xl transition-all duration-300 group
-                  ${isActive 
-                    ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-[0_0_20px_rgba(79,70,229,0.1)]" 
-                    : "text-slate-400 hover:bg-slate-900 hover:text-slate-200 border border-transparent"}
-                `}
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "auto" }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.2 }}
+                className="text-[15px] font-bold text-white whitespace-nowrap overflow-hidden"
               >
-                <div className={`${isActive ? "text-indigo-400" : "group-hover:text-indigo-400 transition-colors"}`}>
-                  {item.icon}
-                </div>
-                <span className="hidden md:inline font-medium text-sm">{item.label}</span>
-              </Link>
-            )
-          })}
-        </div>
+                Echo<span className="text-indigo-400">Grade</span>
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </Link>
+
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="hidden md:flex w-6 h-6 items-center justify-center rounded-[6px] text-zinc-500 hover:text-white hover:bg-white/[0.06] transition-all shrink-0"
+        >
+          {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+        </button>
       </div>
 
-      {/* Bottom Section */}
-      <div className="p-3 md:p-4 border-t border-slate-800/50">
-        <Link
-          href="#"
-          className="flex items-center justify-center md:justify-start gap-3 p-3 w-full rounded-xl transition-all duration-300 group text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 border border-transparent hover:border-rose-500/20"
-        >
-          <LogOut size={20} className="group-hover:text-rose-400 transition-colors shrink-0" />
-          <span className="hidden md:inline font-medium text-sm">Sign Out</span>
+      {/* Navigation */}
+      <div className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {/* Section label */}
+        {!collapsed && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 px-3 pb-2 pt-1"
+          >
+            Navigation
+          </motion.p>
+        )}
+
+        {menuItems.map((item, i) => {
+          const isActive = pathname === item.href || (
+            item.href !== "/" && pathname.startsWith(item.href)
+          );
+          const Icon = item.icon;
+
+          return (
+            <Link key={i} href={item.href}>
+              <motion.div
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.97 }}
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-[10px] transition-all duration-150 group cursor-pointer ${
+                  isActive
+                    ? "bg-indigo-500/[0.12] text-indigo-300 border border-indigo-500/20"
+                    : "text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]"
+                }`}
+              >
+                {/* Active indicator */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full bg-indigo-400"
+                  />
+                )}
+
+                <Icon
+                  size={16}
+                  className={`shrink-0 transition-colors ${
+                    isActive ? "text-indigo-400" : "text-zinc-500 group-hover:text-zinc-300"
+                  }`}
+                />
+
+                <AnimatePresence>
+                  {!collapsed && (
+                    <motion.span
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: "auto" }}
+                      exit={{ opacity: 0, width: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className={`text-[13px] font-medium whitespace-nowrap overflow-hidden ${
+                        isActive ? "text-indigo-300" : ""
+                      }`}
+                    >
+                      {item.label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+
+                {/* Tooltip for collapsed state */}
+                {collapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-900 border border-white/10 rounded-[8px] text-[12px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-50">
+                    {item.label}
+                  </div>
+                )}
+              </motion.div>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Bottom section */}
+      <div className="p-3 border-t border-white/[0.05]">
+        {/* User Avatar Area */}
+        {!collapsed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-3 px-3 py-2.5 mb-1 rounded-[10px] bg-white/[0.02] border border-white/[0.05]"
+          >
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
+              A
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-[12px] font-medium text-white truncate">Admin User</p>
+              <p className="text-[11px] text-zinc-500 truncate">admin@echograde.ai</p>
+            </div>
+          </motion.div>
+        )}
+
+        <Link href="#">
+          <motion.div
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.97 }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-zinc-500 hover:text-red-400 hover:bg-red-500/[0.08] transition-all group cursor-pointer"
+          >
+            <LogOut size={16} className="shrink-0 transition-colors group-hover:text-red-400" />
+            <AnimatePresence>
+              {!collapsed && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[13px] font-medium whitespace-nowrap overflow-hidden"
+                >
+                  Sign Out
+                </motion.span>
+              )}
+            </AnimatePresence>
+
+            {collapsed && (
+              <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-900 border border-white/10 rounded-[8px] text-[12px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-50">
+                Sign Out
+              </div>
+            )}
+          </motion.div>
         </Link>
       </div>
-
-    </div>
+    </motion.div>
   );
-};
-
-export default Sidebar;
+}

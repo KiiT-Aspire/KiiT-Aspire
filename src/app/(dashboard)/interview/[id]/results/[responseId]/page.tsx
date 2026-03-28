@@ -3,31 +3,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Loader2,
-  ArrowLeft,
-  User,
-  Calendar,
-  Award,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Mail,
-  Volume2,
-  BrainCircuit,
-  MessageSquare,
-  Sparkles,
-  Play
+  Loader2, ArrowLeft, User, Calendar, Award, Clock,
+  CheckCircle2, XCircle, AlertCircle, Mail, Volume2,
+  MessageSquare, Sparkles, Play, Activity, Mic
 } from "lucide-react";
 
 interface QuestionAnswer {
@@ -51,6 +31,54 @@ interface ResponseDetails {
   questionAnswers: QuestionAnswer[];
 }
 
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+};
+const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } };
+
+function ScoreRing({ score }: { score: number }) {
+  const radius = 42;
+  const circ = 2 * Math.PI * radius;
+  const filled = (score / 100) * circ;
+  const color = score >= 75 ? "#34d399" : score >= 50 ? "#fbbf24" : "#f87171";
+  return (
+    <div className="relative flex items-center justify-center">
+      <svg width="110" height="110" className="-rotate-90">
+        <circle cx="55" cy="55" r={radius} stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="none" />
+        <motion.circle
+          cx="55" cy="55" r={radius}
+          stroke={color} strokeWidth="8" fill="none" strokeLinecap="round"
+          strokeDasharray={circ}
+          initial={{ strokeDashoffset: circ }}
+          animate={{ strokeDashoffset: circ - filled }}
+          transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
+        />
+      </svg>
+      <div className="absolute text-center">
+        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="text-3xl font-black" style={{ color }}>
+          {score}
+        </motion.span>
+        <div className="text-[10px] text-zinc-600 font-medium">/ 100</div>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const config = {
+    completed: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20", Icon: CheckCircle2, label: "Completed" },
+    in_progress: { bg: "bg-indigo-500/10", text: "text-indigo-400", border: "border-indigo-500/20", Icon: Activity, label: "In Progress" },
+    abandoned: { bg: "bg-zinc-500/10", text: "text-zinc-500", border: "border-zinc-500/20", Icon: XCircle, label: "Abandoned" },
+  }[status] || { bg: "bg-zinc-500/10", text: "text-zinc-400", border: "border-zinc-500/20", Icon: AlertCircle, label: status };
+  const { Icon } = config;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border ${config.bg} ${config.text} ${config.border}`}>
+      <Icon className="w-3.5 h-3.5" />{config.label}
+    </span>
+  );
+}
+
 export default function ResponseDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -68,12 +96,7 @@ export default function ResponseDetailPage() {
   }, [interviewId, responseId]);
 
   useEffect(() => {
-    return () => {
-      if (audioElement) {
-        audioElement.pause();
-        audioElement.currentTime = 0;
-      }
-    };
+    return () => { if (audioElement) { audioElement.pause(); audioElement.currentTime = 0; } };
   }, [audioElement]);
 
   const fetchResponseDetails = async () => {
@@ -81,7 +104,6 @@ export default function ResponseDetailPage() {
       setLoading(true);
       const res = await fetch(`/api/interviews/${interviewId}/responses/${responseId}`);
       const data = await res.json();
-
       if (data.success) {
         setResponse({
           id: data.data.id,
@@ -93,295 +115,271 @@ export default function ResponseDetailPage() {
           startedAt: data.data.startedAt,
           completedAt: data.data.completedAt,
           timeTaken: data.data.timeTaken,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          questionAnswers: (data.data.answers || []).map((answer: any) => ({
-            questionText: answer.questionText,
-            audioUrl: answer.audioUrl,
-            audioDuration: answer.audioDuration,
-            questionOrder: answer.questionOrder,
-            answeredAt: answer.answeredAt,
+          questionAnswers: (data.data.answers || []).map((a: any) => ({
+            questionText: a.questionText,
+            audioUrl: a.audioUrl,
+            audioDuration: a.audioDuration,
+            questionOrder: a.questionOrder,
+            answeredAt: a.answeredAt,
           })),
         });
-      } else {
-        toast.error("Failed to load response details");
-      }
-    } catch (error) {
-      toast.error("Error loading response details");
-    } finally {
-      setLoading(false);
-    }
+      } else toast.error("Failed to load response details");
+    } catch { toast.error("Error loading response details"); }
+    finally { setLoading(false); }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20"><CheckCircle2 className="h-3 w-3 mr-1" />Completed</Badge>;
-      case "in_progress":
-        return <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20"><AlertCircle className="h-3 w-3 mr-1" />In Progress</Badge>;
-      case "abandoned":
-        return <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/20"><XCircle className="h-3 w-3 mr-1" />Abandoned</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
-
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "--";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
+  const formatDuration = (s: number | null) => {
+    if (!s) return "—";
+    return `${Math.floor(s / 60)}m ${s % 60}s`;
   };
 
   const playAudio = (audioUrl: string) => {
-    if (audioElement) {
-      audioElement.pause();
-      audioElement.currentTime = 0;
-    }
-    if (playingAudio === audioUrl) {
-      setPlayingAudio(null);
-      setAudioElement(null);
-      return;
-    }
+    if (audioElement) { audioElement.pause(); audioElement.currentTime = 0; }
+    if (playingAudio === audioUrl) { setPlayingAudio(null); setAudioElement(null); return; }
     setPlayingAudio(audioUrl);
     const audio = new Audio(audioUrl);
     setAudioElement(audio);
-
-    audio.play().catch(() => {
-      toast.error("Failed to play audio blob");
-      setPlayingAudio(null);
-      setAudioElement(null);
-    });
-    audio.onended = () => {
-      setPlayingAudio(null);
-      setAudioElement(null);
-    };
+    audio.play().catch(() => { toast.error("Failed to play audio"); setPlayingAudio(null); setAudioElement(null); });
+    audio.onended = () => { setPlayingAudio(null); setAudioElement(null); };
   };
 
+  // Loading
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-200">
-         <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
-         <p className="text-lg font-medium animate-pulse">Retrieving Assessment Data...</p>
+      <div className="min-h-screen bg-[#020202] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+          <p className="text-zinc-500 text-[14px]">Loading candidate report…</p>
+        </div>
       </div>
     );
   }
 
+  // Not found
   if (!response) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-200">
-        <Card className="w-full max-w-md bg-slate-900 border-slate-800">
-          <CardHeader className="text-center">
-            <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-4" />
-            <CardTitle className="text-2xl text-rose-500">Telemetry Lost</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center text-slate-400 space-y-6">
-            <p>The evaluation payload could not be located in the database layer.</p>
-            <Button variant="outline" onClick={() => router.push(`/interview/${interviewId}/results`)} className="bg-slate-950 border-slate-700 w-full text-slate-300">
-              Return to Submissions
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-[#020202] flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-7 h-7 text-red-400" />
+          </div>
+          <h2 className="text-[18px] font-bold text-white mb-2">Response Not Found</h2>
+          <p className="text-zinc-500 text-[13px] mb-6">This assessment record could not be located.</p>
+          <button onClick={() => router.push(`/interview/${interviewId}/results`)} className="text-[13px] font-medium text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 mx-auto">
+            <ArrowLeft className="w-4 h-4" /> Back to Results
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 p-6 sm:p-10 relative">
-      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] -z-10 opacity-20" />
-      <Toaster position="top-right" toastOptions={{ style: { background: '#1e293b', color: '#f8fafc', border: '1px solid #334155' } }} />
-      
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Header Ribbon */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-800 pb-6 relative z-10">
-          <div>
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/interview/${interviewId}/results`)}
-              className="mb-6 bg-slate-900/80 backdrop-blur border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-full h-10 px-6"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Cohort Overview
-            </Button>
-            <div className="flex items-center gap-3">
-               <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/30 text-indigo-400">
-                  <User className="w-6 h-6" />
-               </div>
-               <div>
-                 <h1 className="text-3xl font-bold tracking-tight text-white mb-1">
-                   {response.studentName}
-                 </h1>
-                 <p className="text-cyan-400 text-sm font-mono flex items-center gap-2">
-                   <Mail className="w-4 h-4" /> {response.studentEmail}
-                 </p>
-               </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 bg-slate-900/50 p-3 rounded-xl border border-slate-800 backdrop-blur">
-             <div className="text-right">
-               <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Status</p>
-               {getStatusBadge(response.status)}
-             </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#020202] text-foreground selection:bg-indigo-500/20">
+      {/* Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-indigo-600/[0.04] blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-violet-600/[0.03] blur-[100px] rounded-full" />
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
-          
-          {/* Main Assessment Feed */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold flex items-center gap-2 text-slate-200">
-                 <MessageSquare className="w-5 h-5 text-indigo-400" /> Interaction Log
-              </h2>
-              <Badge variant="outline" className="border-slate-800 text-slate-400 bg-slate-900">
-                {response.questionAnswers.length} Prompts Total
-              </Badge>
+      <Toaster position="bottom-right" toastOptions={{ style: { background: "#111", color: "#fff", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }, duration: 3000 }} />
+
+      <div className="relative z-10 max-w-[1100px] mx-auto px-6 py-8 lg:px-10 lg:py-10">
+
+        {/* Back button */}
+        <motion.button
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          onClick={() => router.push(`/interview/${interviewId}/results`)}
+          className="flex items-center gap-2 text-[13px] font-medium text-zinc-500 hover:text-white transition-colors mb-7 group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+          Back to Results
+        </motion.button>
+
+        {/* Candidate Header */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={stagger}
+          className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 mb-8 pb-8 border-b border-white/[0.06]"
+        >
+          <motion.div variants={fadeUp} className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center text-[20px] font-black text-indigo-400">
+              {response.studentName?.[0]?.toUpperCase() || "?"}
             </div>
+            <div>
+              <h1 className="text-[24px] font-bold text-white tracking-tight">{response.studentName}</h1>
+              <p className="text-[13px] text-zinc-500 flex items-center gap-1.5 mt-0.5">
+                <Mail className="w-3.5 h-3.5" />
+                {response.studentEmail}
+              </p>
+            </div>
+          </motion.div>
+          <motion.div variants={fadeUp}><StatusBadge status={response.status} /></motion.div>
+        </motion.div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
+
+          {/* Q&A Feed */}
+          <div className="lg:col-span-2 space-y-5">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between mb-1"
+            >
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-indigo-400" />
+                <h2 className="text-[15px] font-bold text-white">Interaction Log</h2>
+              </div>
+              <span className="text-[11px] font-bold text-zinc-500 bg-white/[0.04] border border-white/[0.06] px-2.5 py-1 rounded-full">
+                {response.questionAnswers.length} questions
+              </span>
+            </motion.div>
 
             {response.questionAnswers.length === 0 ? (
-              <Card className="bg-slate-900/40 border-slate-800 border-dashed text-center py-20">
-                <BrainCircuit className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-                <p className="text-slate-400">No telemetry recorded for this assessment yet.</p>
-              </Card>
+              <div className="py-20 rounded-[16px] border border-dashed border-white/[0.06] text-center text-zinc-600 text-[13px]">
+                No answers recorded for this session.
+              </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {response.questionAnswers
                   .sort((a, b) => a.questionOrder - b.questionOrder)
-                  .map((qa, index) => (
-                    <Card key={index} className="bg-slate-900/80 border-slate-800 shadow-xl relative overflow-hidden group">
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-800 group-hover:bg-indigo-500 transition-colors" />
-                      <CardContent className="p-6 sm:p-8">
-                        
-                        <div className="flex gap-4 items-start mb-6">
-                           <div className="shrink-0 mt-1">
-                              <div className="w-8 h-8 rounded-full bg-slate-800 text-slate-300 font-mono text-xs flex items-center justify-center border border-slate-700">
-                                {String(qa.questionOrder).padStart(2, '0')}
-                              </div>
-                           </div>
-                           <div>
-                             <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">Evaluator AI</p>
-                             <h4 className="text-lg font-medium text-slate-200 leading-snug">"{qa.questionText}"</h4>
-                           </div>
+                  .map((qa, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.06 }}
+                      className="rounded-[16px] border border-white/[0.07] bg-[#0a0a0a] overflow-hidden group"
+                    >
+                      {/* Question */}
+                      <div className="px-5 py-4 border-b border-white/[0.05]">
+                        <div className="flex items-start gap-3">
+                          <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center text-[10px] font-black text-indigo-400 mt-0.5">
+                            {qa.questionOrder}
+                          </span>
+                          <div>
+                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5">Question</p>
+                            <h3 className="text-[15px] text-white font-medium leading-relaxed">"{qa.questionText}"</h3>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Answer */}
+                      <div className="px-5 py-4">
+                        <div className="flex items-center gap-1.5 mb-3">
+                          <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Candidate Response</p>
+                          <span className="ml-auto text-[11px] text-zinc-600 font-mono">
+                            {new Date(qa.answeredAt).toLocaleTimeString()}
+                          </span>
                         </div>
 
-                        <div className="ml-12 pl-6 border-l-2 border-slate-800 relative">
-                           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-500 mb-4 flex items-center gap-2">
-                             <Mic className="w-3 h-3" /> Candidate Audio Payload
-                             <span className="text-slate-600 font-mono font-normal ml-auto text-[10px]">{new Date(qa.answeredAt).toLocaleTimeString()}</span>
-                           </p>
-                           
-                           {qa.audioUrl ? (
-                             <div className="flex flex-wrap items-center gap-4 bg-slate-950/50 p-4 rounded-xl border border-slate-800/80">
-                               <Button
-                                 onClick={() => playAudio(qa.audioUrl!)}
-                                 variant="outline"
-                                 className={`rounded-full h-12 px-6 gap-2 transition-all ${
-                                   playingAudio === qa.audioUrl 
-                                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 animate-pulse' 
-                                     : 'bg-indigo-600 hover:bg-indigo-500 text-white border-none shadow-[0_0_20px_rgba(79,70,229,0.3)]'
-                                 }`}
-                               >
-                                 {playingAudio === qa.audioUrl ? (
-                                   <><Volume2 className="h-4 w-4" /> Playing Buffer...</>
-                                 ) : (
-                                   <><Play className="h-4 w-4 fill-current" /> Play Transmission</>
-                                 )}
-                               </Button>
-                               
-                               {qa.audioDuration && (
-                                 <div className="flex items-center gap-2 text-slate-400 text-sm font-mono bg-slate-900 px-3 py-1.5 rounded-lg">
-                                   <Clock className="w-4 h-4 text-slate-500" />
-                                   {qa.audioDuration}s Runtime
-                                 </div>
-                               )}
-                             </div>
-                           ) : (
-                             <div className="flex items-center justify-center p-6 bg-slate-950/50 rounded-xl border border-slate-800 border-dashed">
-                               <p className="text-sm text-slate-500 flex items-center gap-2">
-                                 <AlertCircle className="w-4 h-4" /> Audio stream dropped or bypassed.
-                               </p>
-                             </div>
-                           )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                        {qa.audioUrl ? (
+                          <div className="flex items-center gap-3 p-3.5 rounded-[12px] bg-white/[0.02] border border-white/[0.05]">
+                            <button
+                              onClick={() => playAudio(qa.audioUrl!)}
+                              className={`flex items-center gap-2 h-9 px-4 rounded-[9px] text-[13px] font-semibold transition-all ${
+                                playingAudio === qa.audioUrl
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                                  : "bg-indigo-500/15 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/25"
+                              }`}
+                            >
+                              {playingAudio === qa.audioUrl
+                                ? <><Volume2 className="w-3.5 h-3.5 animate-pulse" /> Playing</>
+                                : <><Play className="w-3.5 h-3.5 fill-current" /> Play</>
+                              }
+                            </button>
+                            {qa.audioDuration && (
+                              <span className="text-[12px] text-zinc-500 font-mono flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {qa.audioDuration}s
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-3.5 rounded-[12px] border border-dashed border-white/[0.05] text-center text-zinc-600 text-[12px]">
+                            No audio recorded for this question
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
                   ))}
               </div>
             )}
           </div>
 
-          {/* Right Sidebar Metadata */}
-          <div className="space-y-6">
-            
+          {/* Sidebar */}
+          <div className="space-y-5">
+
+            {/* Score Card */}
             {response.status === "completed" && (
-               <Card className="bg-slate-900/80 border-slate-800 overflow-hidden relative shadow-2xl">
-                 <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 to-cyan-500" />
-                 <CardHeader className="pb-4">
-                   <CardDescription className="uppercase tracking-wider font-semibold text-emerald-500 flex items-center gap-2 text-xs">
-                     <Award className="w-4 h-4" /> Aggregated Telemetry Output
-                   </CardDescription>
-                 </CardHeader>
-                 <CardContent>
-                   <div className="flex items-baseline mb-6 font-mono">
-                     <span className="text-6xl font-black text-white">{response.score ?? "--"}</span>
-                     <span className="text-xl text-slate-500 ml-2">/ 100</span>
-                   </div>
-                   
-                   <div className="space-y-2">
-                     <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-indigo-400" /> AI Synthesis Summary
-                     </p>
-                     <div className="bg-slate-950/50 p-4 rounded-xl border border-indigo-500/20">
-                       <p className="text-sm text-slate-300 leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
-                         {response.evaluation || "No abstract synthesis was written for this session."}
-                       </p>
-                     </div>
-                   </div>
-                 </CardContent>
-               </Card>
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="rounded-[18px] border border-white/[0.07] bg-[#0a0a0a] overflow-hidden"
+              >
+                <div className="h-[2px] bg-gradient-to-r from-indigo-500 via-violet-500 to-transparent" />
+                <div className="p-6">
+                  <div className="flex items-center gap-2 mb-5">
+                    <Award className="w-4 h-4 text-indigo-400" />
+                    <h3 className="text-[13px] font-bold text-white">Final Score</h3>
+                  </div>
+                  <div className="flex justify-center mb-5">
+                    {response.score !== null ? (
+                      <ScoreRing score={response.score} />
+                    ) : (
+                      <div className="text-center py-4 text-zinc-600 text-[13px]">Score pending</div>
+                    )}
+                  </div>
+
+                  {response.evaluation && (
+                    <div className="mt-4 pt-4 border-t border-white/[0.05]">
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                        <p className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest">AI Evaluation</p>
+                      </div>
+                      <p className="text-[13px] text-zinc-400 leading-relaxed max-h-[200px] overflow-y-auto whitespace-pre-wrap">
+                        {response.evaluation}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
             )}
 
-            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur">
-              <CardHeader className="pb-4 border-b border-slate-800/50">
-                <CardTitle className="text-lg text-slate-200">Execution Timestamps</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-5">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700">
-                     <Calendar className="w-4 h-4 text-slate-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Session Init</p>
-                    <p className="text-slate-300 font-mono text-sm">{new Date(response.startedAt).toLocaleString()}</p>
-                  </div>
-                </div>
-
-                {response.completedAt && (
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700">
-                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            {/* Timestamps */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="rounded-[18px] border border-white/[0.07] bg-[#0a0a0a] p-6"
+            >
+              <h3 className="text-[13px] font-bold text-white mb-5">Session Details</h3>
+              <div className="space-y-4">
+                {[
+                  { icon: Calendar, label: "Started", value: new Date(response.startedAt).toLocaleString() },
+                  ...(response.completedAt ? [{ icon: CheckCircle2, label: "Completed", value: new Date(response.completedAt).toLocaleString() }] : []),
+                  { icon: Clock, label: "Duration", value: formatDuration(response.timeTaken) },
+                ].map((item, i) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-[8px] bg-white/[0.03] border border-white/[0.06] flex items-center justify-center shrink-0">
+                        <Icon className="w-3.5 h-3.5 text-zinc-500" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-0.5">{item.label}</p>
+                        <p className="text-[13px] text-zinc-300 font-mono">{item.value}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Session Terminated</p>
-                      <p className="text-slate-300 font-mono text-sm">{new Date(response.completedAt).toLocaleString()}</p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700">
-                     <Clock className="w-4 h-4 text-cyan-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Active Duration</p>
-                    <p className="text-slate-300 font-mono text-sm">{formatDuration(response.timeTaken)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+                  );
+                })}
+              </div>
+            </motion.div>
           </div>
-
         </div>
       </div>
     </div>
