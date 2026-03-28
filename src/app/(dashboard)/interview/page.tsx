@@ -118,6 +118,7 @@ export default function InterviewPage() {
 
       if (data.success) {
         setInterviews(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data.data.map((interview: any) => ({
             id: interview.id,
             name: interview.name,
@@ -181,6 +182,7 @@ export default function InterviewPage() {
       const data = await response.json();
       if (data.success) {
         toast.success("AI generated questions successfully!");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const newQuestions = data.data.map((q: any) => ({
           ...q,
           id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -475,7 +477,7 @@ export default function InterviewPage() {
               <div className="col-span-full py-20 bg-slate-900/40 border border-slate-800 border-dashed rounded-3xl flex flex-col items-center justify-center">
                 <Sparkles className="h-16 w-16 text-indigo-500/50 mb-6" />
                 <h2 className="text-2xl font-bold text-slate-200 mb-2">No Interviews Found</h2>
-                <p className="text-slate-500 mb-6">You haven't created any AI mock interviews yet.</p>
+                <p className="text-slate-500 mb-6">You haven&apos;t created any AI mock interviews yet.</p>
                 <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 rounded-full">
                   Create First Interview
                 </Button>

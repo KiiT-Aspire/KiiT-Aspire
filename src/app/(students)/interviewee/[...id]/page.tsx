@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import toast, { Toaster } from "react-hot-toast";
 import dynamic from "next/dynamic";
-import { Clock, Mic, MicOff, CheckCircle2, AlertCircle, Play, Square, Loader2 } from "lucide-react";
+import { Clock, Mic, MicOff, CheckCircle2, AlertCircle, Play, Square, Loader2, Sparkles } from "lucide-react";
 
 // For hydration issues with media recorder
 const ReactMediaRecorder = dynamic(
@@ -55,6 +55,7 @@ export default function IntervieweePage() {
   const [recordedAudioDuration, setRecordedAudioDuration] = useState<number>(0);
   const [audioDuration, setAudioDuration] = useState<number>(0);
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recorderRef = useRef<any>({});
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -351,7 +352,7 @@ export default function IntervieweePage() {
               <ul className="text-sm space-y-2">
                 <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-indigo-500" /> Wait for questions to resolve.</li>
                 <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-indigo-500" /> Hold <kbd className="mx-1 px-1.5 py-0.5 bg-slate-700 rounded text-xs">Spacebar</kbd> to record.</li>
-                <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-indigo-500" /> Don't reload the page.</li>
+                <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-indigo-500" /> Don&apos;t reload the page.</li>
               </ul>
             </div>
             
@@ -470,7 +471,7 @@ export default function IntervieweePage() {
                   Prompt {questionCount} of {interviewDetails?.questionCount}
                 </span>
                 <h3 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-100 leading-tight">
-                  "{currentQuestion}"
+                  &quot;{currentQuestion}&quot;
                 </h3>
              </CardContent>
            </Card>

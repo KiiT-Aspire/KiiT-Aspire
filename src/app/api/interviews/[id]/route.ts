@@ -74,7 +74,7 @@ export async function PUT(
     }
 
     // Update interview basic info
-    const updateData: any = { updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (name !== undefined) updateData.name = name;
     if (subject !== undefined) updateData.subject = subject;
     if (isActive !== undefined) updateData.isActive = isActive;
