@@ -6,9 +6,9 @@ import toast, { Toaster } from "react-hot-toast";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +23,11 @@ import {
   XCircle,
   AlertCircle,
   Mail,
-  FileText,
   Volume2,
+  BrainCircuit,
+  MessageSquare,
+  Sparkles,
+  Play
 } from "lucide-react";
 
 interface QuestionAnswer {
@@ -48,7 +51,7 @@ interface ResponseDetails {
   questionAnswers: QuestionAnswer[];
 }
 
-const ResponseDetailPage = () => {
+export default function ResponseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const interviewId = params.id as string;
@@ -57,17 +60,13 @@ const ResponseDetailPage = () => {
   const [response, setResponse] = useState<ResponseDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null
-  );
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (interviewId && responseId) {
-      fetchResponseDetails();
-    }
+    if (interviewId && responseId) fetchResponseDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interviewId, responseId]);
 
-  // Cleanup audio on unmount
   useEffect(() => {
     return () => {
       if (audioElement) {
@@ -80,16 +79,11 @@ const ResponseDetailPage = () => {
   const fetchResponseDetails = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        `/api/interviews/${interviewId}/responses/${responseId}`
-      );
+      const res = await fetch(`/api/interviews/${interviewId}/responses/${responseId}`);
       const data = await res.json();
 
-      console.log("API Response:", data);
-
       if (data.success) {
-        // Map the API response to match the expected structure
-        const mappedResponse: ResponseDetails = {
+        setResponse({
           id: data.data.id,
           studentName: data.data.student?.name || "Unknown",
           studentEmail: data.data.student?.email || "N/A",
@@ -99,6 +93,7 @@ const ResponseDetailPage = () => {
           startedAt: data.data.startedAt,
           completedAt: data.data.completedAt,
           timeTaken: data.data.timeTaken,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           questionAnswers: (data.data.answers || []).map((answer: any) => ({
             questionText: answer.questionText,
             audioUrl: answer.audioUrl,
@@ -106,13 +101,11 @@ const ResponseDetailPage = () => {
             questionOrder: answer.questionOrder,
             answeredAt: answer.answeredAt,
           })),
-        };
-        setResponse(mappedResponse);
+        });
       } else {
         toast.error("Failed to load response details");
       }
     } catch (error) {
-      console.error("Error fetching response details:", error);
       toast.error("Error loading response details");
     } finally {
       setLoading(false);
@@ -122,64 +115,42 @@ const ResponseDetailPage = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return (
-          <Badge className="bg-green-100 text-green-800 border-green-300">
-            <CheckCircle2 className="h-4 w-4 mr-1" />
-            Completed
-          </Badge>
-        );
+        return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20"><CheckCircle2 className="h-3 w-3 mr-1" />Completed</Badge>;
       case "in_progress":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-300">
-            <AlertCircle className="h-4 w-4 mr-1" />
-            In Progress
-          </Badge>
-        );
+        return <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20"><AlertCircle className="h-3 w-3 mr-1" />In Progress</Badge>;
       case "abandoned":
-        return (
-          <Badge className="bg-gray-100 text-gray-800 border-gray-300">
-            <XCircle className="h-4 w-4 mr-1" />
-            Abandoned
-          </Badge>
-        );
+        return <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/20"><XCircle className="h-3 w-3 mr-1" />Abandoned</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
   };
 
   const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "N/A";
+    if (!seconds) return "--";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
   };
 
   const playAudio = (audioUrl: string) => {
-    // Stop currently playing audio if any
     if (audioElement) {
       audioElement.pause();
       audioElement.currentTime = 0;
     }
-
-    // If clicking the same audio that's playing, just stop it
     if (playingAudio === audioUrl) {
       setPlayingAudio(null);
       setAudioElement(null);
       return;
     }
-
-    // Play new audio
     setPlayingAudio(audioUrl);
     const audio = new Audio(audioUrl);
     setAudioElement(audio);
 
-    audio.play().catch((error) => {
-      console.error("Error playing audio:", error);
-      toast.error("Failed to play audio");
+    audio.play().catch(() => {
+      toast.error("Failed to play audio blob");
       setPlayingAudio(null);
       setAudioElement(null);
     });
-
     audio.onended = () => {
       setPlayingAudio(null);
       setAudioElement(null);
@@ -188,259 +159,231 @@ const ResponseDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-white p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
-            <p className="text-gray-600">Loading response details...</p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-200">
+         <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+         <p className="text-lg font-medium animate-pulse">Retrieving Assessment Data...</p>
       </div>
     );
   }
 
   if (!response) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-white p-6">
-        <div className="max-w-4xl mx-auto">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/interview/${interviewId}/results`)}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Results
-          </Button>
-          <Card className="p-12 text-center">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Response not found
-            </h3>
-            <p className="text-gray-600">
-              The response you're looking for doesn't exist
-            </p>
-          </Card>
-        </div>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-200">
+        <Card className="w-full max-w-md bg-slate-900 border-slate-800">
+          <CardHeader className="text-center">
+            <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-4" />
+            <CardTitle className="text-2xl text-rose-500">Telemetry Lost</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center text-slate-400 space-y-6">
+            <p>The evaluation payload could not be located in the database layer.</p>
+            <Button variant="outline" onClick={() => router.push(`/interview/${interviewId}/results`)} className="bg-slate-950 border-slate-700 w-full text-slate-300">
+              Return to Submissions
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white p-6">
-      <Toaster position="top-right" />
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/interview/${interviewId}/results`)}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Results
-          </Button>
-
-          <h1 className="text-3xl font-bold text-gray-900">Response Details</h1>
-          <p className="text-gray-600 mt-1">
-            Detailed view of student's interview attempt
-          </p>
+    <div className="min-h-screen bg-slate-950 text-slate-50 p-6 sm:p-10 relative">
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] -z-10 opacity-20" />
+      <Toaster position="top-right" toastOptions={{ style: { background: '#1e293b', color: '#f8fafc', border: '1px solid #334155' } }} />
+      
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* Header Ribbon */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-800 pb-6 relative z-10">
+          <div>
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/interview/${interviewId}/results`)}
+              className="mb-6 bg-slate-900/80 backdrop-blur border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-full h-10 px-6"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Cohort Overview
+            </Button>
+            <div className="flex items-center gap-3">
+               <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/30 text-indigo-400">
+                  <User className="w-6 h-6" />
+               </div>
+               <div>
+                 <h1 className="text-3xl font-bold tracking-tight text-white mb-1">
+                   {response.studentName}
+                 </h1>
+                 <p className="text-cyan-400 text-sm font-mono flex items-center gap-2">
+                   <Mail className="w-4 h-4" /> {response.studentEmail}
+                 </p>
+               </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 bg-slate-900/50 p-3 rounded-xl border border-slate-800 backdrop-blur">
+             <div className="text-right">
+               <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Status</p>
+               {getStatusBadge(response.status)}
+             </div>
+          </div>
         </div>
 
-        {/* Student Information Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Student Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <div className="flex items-center mb-4">
-                  <User className="h-5 w-5 mr-2 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-600">Student Name</p>
-                    <p className="font-medium text-lg">
-                      {response.studentName}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center mb-4">
-                  <Mail className="h-5 w-5 mr-2 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-600">Email</p>
-                    <p className="font-medium">{response.studentEmail}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center">
-                  <FileText className="h-5 w-5 mr-2 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-600">Status</p>
-                    <div className="mt-1">
-                      {getStatusBadge(response.status)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center mb-4">
-                  <Calendar className="h-5 w-5 mr-2 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-600">Started At</p>
-                    <p className="font-medium">
-                      {new Date(response.startedAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {response.completedAt && (
-                  <div className="flex items-center mb-4">
-                    <CheckCircle2 className="h-5 w-5 mr-2 text-gray-500" />
-                    <div>
-                      <p className="text-sm text-gray-600">Completed At</p>
-                      <p className="font-medium">
-                        {new Date(response.completedAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center">
-                  <Clock className="h-5 w-5 mr-2 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-600">Time Taken</p>
-                    <p className="font-medium">
-                      {formatDuration(response.timeTaken)}
-                    </p>
-                  </div>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
+          
+          {/* Main Assessment Feed */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-bold flex items-center gap-2 text-slate-200">
+                 <MessageSquare className="w-5 h-5 text-indigo-400" /> Interaction Log
+              </h2>
+              <Badge variant="outline" className="border-slate-800 text-slate-400 bg-slate-900">
+                {response.questionAnswers.length} Prompts Total
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Score and Evaluation Card */}
-        {response.status === "completed" && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Score & Evaluation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <div className="flex items-center">
-                    <Award className="h-8 w-8 mr-3 text-green-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">Final Score</p>
-                      <p className="text-4xl font-bold text-green-600">
-                        {response.score ?? "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Overall Evaluation
-                  </p>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-sm">
-                      {response.evaluation || "No evaluation provided"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Questions and Answers */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Questions & Answers</CardTitle>
-            <CardDescription>
-              Total questions answered: {response.questionAnswers.length}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
             {response.questionAnswers.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No questions answered yet
-              </div>
+              <Card className="bg-slate-900/40 border-slate-800 border-dashed text-center py-20">
+                <BrainCircuit className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+                <p className="text-slate-400">No telemetry recorded for this assessment yet.</p>
+              </Card>
             ) : (
               <div className="space-y-6">
                 {response.questionAnswers
                   .sort((a, b) => a.questionOrder - b.questionOrder)
                   .map((qa, index) => (
-                    <div
-                      key={index}
-                      className="border border-gray-200 rounded-lg p-5 bg-gray-50"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center mb-2">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white text-sm font-medium mr-3">
-                              Q{qa.questionOrder}
-                            </span>
-                            <h4 className="font-medium text-gray-900">
-                              Question
-                            </h4>
-                          </div>
-                          <p className="text-gray-700 ml-11">
-                            {qa.questionText}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="ml-11 mt-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-gray-600 mb-2">
-                              Audio Answer
-                            </p>
-                            {qa.audioUrl ? (
-                              <div className="flex items-center space-x-3">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => playAudio(qa.audioUrl!)}
-                                  className="flex items-center"
-                                >
-                                  <Volume2 className="h-4 w-4 mr-2" />
-                                  {playingAudio === qa.audioUrl
-                                    ? "Playing..."
-                                    : "Play Audio"}
-                                </Button>
-                                {qa.audioDuration && (
-                                  <span className="text-sm text-gray-500">
-                                    Duration: {qa.audioDuration}s
-                                  </span>
-                                )}
+                    <Card key={index} className="bg-slate-900/80 border-slate-800 shadow-xl relative overflow-hidden group">
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-800 group-hover:bg-indigo-500 transition-colors" />
+                      <CardContent className="p-6 sm:p-8">
+                        
+                        <div className="flex gap-4 items-start mb-6">
+                           <div className="shrink-0 mt-1">
+                              <div className="w-8 h-8 rounded-full bg-slate-800 text-slate-300 font-mono text-xs flex items-center justify-center border border-slate-700">
+                                {String(qa.questionOrder).padStart(2, '0')}
                               </div>
-                            ) : (
-                              <p className="text-sm text-gray-400">
-                                No audio recorded
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="text-right">
-                            <p className="text-xs text-gray-500">Answered at</p>
-                            <p className="text-sm text-gray-700">
-                              {new Date(qa.answeredAt).toLocaleTimeString()}
-                            </p>
-                          </div>
+                           </div>
+                           <div>
+                             <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">Evaluator AI</p>
+                             <h4 className="text-lg font-medium text-slate-200 leading-snug">"{qa.questionText}"</h4>
+                           </div>
                         </div>
-                      </div>
-                    </div>
+
+                        <div className="ml-12 pl-6 border-l-2 border-slate-800 relative">
+                           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-500 mb-4 flex items-center gap-2">
+                             <Mic className="w-3 h-3" /> Candidate Audio Payload
+                             <span className="text-slate-600 font-mono font-normal ml-auto text-[10px]">{new Date(qa.answeredAt).toLocaleTimeString()}</span>
+                           </p>
+                           
+                           {qa.audioUrl ? (
+                             <div className="flex flex-wrap items-center gap-4 bg-slate-950/50 p-4 rounded-xl border border-slate-800/80">
+                               <Button
+                                 onClick={() => playAudio(qa.audioUrl!)}
+                                 variant="outline"
+                                 className={`rounded-full h-12 px-6 gap-2 transition-all ${
+                                   playingAudio === qa.audioUrl 
+                                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 animate-pulse' 
+                                     : 'bg-indigo-600 hover:bg-indigo-500 text-white border-none shadow-[0_0_20px_rgba(79,70,229,0.3)]'
+                                 }`}
+                               >
+                                 {playingAudio === qa.audioUrl ? (
+                                   <><Volume2 className="h-4 w-4" /> Playing Buffer...</>
+                                 ) : (
+                                   <><Play className="h-4 w-4 fill-current" /> Play Transmission</>
+                                 )}
+                               </Button>
+                               
+                               {qa.audioDuration && (
+                                 <div className="flex items-center gap-2 text-slate-400 text-sm font-mono bg-slate-900 px-3 py-1.5 rounded-lg">
+                                   <Clock className="w-4 h-4 text-slate-500" />
+                                   {qa.audioDuration}s Runtime
+                                 </div>
+                               )}
+                             </div>
+                           ) : (
+                             <div className="flex items-center justify-center p-6 bg-slate-950/50 rounded-xl border border-slate-800 border-dashed">
+                               <p className="text-sm text-slate-500 flex items-center gap-2">
+                                 <AlertCircle className="w-4 h-4" /> Audio stream dropped or bypassed.
+                               </p>
+                             </div>
+                           )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Right Sidebar Metadata */}
+          <div className="space-y-6">
+            
+            {response.status === "completed" && (
+               <Card className="bg-slate-900/80 border-slate-800 overflow-hidden relative shadow-2xl">
+                 <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 to-cyan-500" />
+                 <CardHeader className="pb-4">
+                   <CardDescription className="uppercase tracking-wider font-semibold text-emerald-500 flex items-center gap-2 text-xs">
+                     <Award className="w-4 h-4" /> Aggregated Telemetry Output
+                   </CardDescription>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="flex items-baseline mb-6 font-mono">
+                     <span className="text-6xl font-black text-white">{response.score ?? "--"}</span>
+                     <span className="text-xl text-slate-500 ml-2">/ 100</span>
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-indigo-400" /> AI Synthesis Summary
+                     </p>
+                     <div className="bg-slate-950/50 p-4 rounded-xl border border-indigo-500/20">
+                       <p className="text-sm text-slate-300 leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
+                         {response.evaluation || "No abstract synthesis was written for this session."}
+                       </p>
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
+            )}
+
+            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur">
+              <CardHeader className="pb-4 border-b border-slate-800/50">
+                <CardTitle className="text-lg text-slate-200">Execution Timestamps</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700">
+                     <Calendar className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Session Init</p>
+                    <p className="text-slate-300 font-mono text-sm">{new Date(response.startedAt).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {response.completedAt && (
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700">
+                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Session Terminated</p>
+                      <p className="text-slate-300 font-mono text-sm">{new Date(response.completedAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700">
+                     <Clock className="w-4 h-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Active Duration</p>
+                    <p className="text-slate-300 font-mono text-sm">{formatDuration(response.timeTaken)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>
+
+        </div>
       </div>
     </div>
   );
-};
-
-export default ResponseDetailPage;
+}
