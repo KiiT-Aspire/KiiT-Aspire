@@ -7,9 +7,9 @@ import { eq, desc, sql } from "drizzle-orm";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, subject, questions, createdBy } = body;
+    const { name, subject, questions, createdBy, timeLimit } = body;
 
-    console.log("Received interview creation request:", { name, subject, createdBy, questionsCount: questions?.length });
+    console.log("Received interview creation request:", { name, subject, createdBy, questionsCount: questions?.length, timeLimit });
 
     // Validate required fields
     if (!name || !subject || !questions || !createdBy) {
@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         name,
         subject,
         createdBy,
+        timeLimit: timeLimit ? parseInt(timeLimit.toString()) : 30, // Default to 30 mins
         isActive: true,
       })
       .returning();
@@ -101,6 +102,7 @@ export async function GET(request: NextRequest) {
         id: interviews.id,
         name: interviews.name,
         subject: interviews.subject,
+        timeLimit: interviews.timeLimit,
         isActive: interviews.isActive,
         createdBy: interviews.createdBy,
         createdAt: interviews.createdAt,
@@ -115,6 +117,7 @@ export async function GET(request: NextRequest) {
         interviews.id,
         interviews.name,
         interviews.subject,
+        interviews.timeLimit,
         interviews.isActive,
         interviews.createdBy,
         interviews.createdAt,

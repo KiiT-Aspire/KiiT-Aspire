@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   PlusCircle,
   Edit3,
@@ -37,8 +38,11 @@ import {
   Link2,
   BarChart3,
   Loader2,
-  Copy,
+  Clock,
+  Sparkles,
+  RefreshCcw,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
 
 interface Question {
@@ -51,6 +55,7 @@ interface Interview {
   id: string;
   name: string;
   subject: string;
+  timeLimit: number;
   questions: Question[];
   questionCount?: number;
   candidatesCount?: number;
@@ -58,61 +63,56 @@ interface Interview {
   isActive?: boolean;
 }
 
-const InterviewPage = () => {
+export default function InterviewPage() {
   const router = useRouter();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
   const [userId, setUserId] = useState<string>("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const [selectedSubjectFilter, setSelectedSubjectFilter] =
-    useState<string>("all");
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedInterview, setSelectedInterview] = useState<Interview | null>(
-    null
-  );
+  
+  const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
+  
   const [currentInterview, setCurrentInterview] = useState<Partial<Interview>>({
     name: "",
     subject: "",
+    timeLimit: 30,
     questions: [],
   });
-  const [currentQuestion, setCurrentQuestion] = useState<{
-    text: string;
-  }>({
-    text: "",
-  });
+  
+  const [currentQuestion, setCurrentQuestion] = useState<{ text: string }>({ text: "" });
 
-  // Fetch user session and interviews on mount
+  const subjects = [
+    "Software Engineering",
+    "Cloud Computing",
+    "Data Science",
+    "System Design",
+    "Frontend Development"
+  ];
+
   useEffect(() => {
     const initializePage = async () => {
       try {
-        // For development without auth, use a mock user ID
         const mockUserId = "mock-teacher-id";
         setUserId(mockUserId);
         await fetchInterviews(mockUserId);
       } catch (error) {
-        console.error("Failed to initialize page:", error);
-        // Still load with mock user for development
-        const mockUserId = "mock-teacher-id";
-        setUserId(mockUserId);
-        await fetchInterviews(mockUserId);
+        console.error("Failed to initialize:", error);
         setLoading(false);
       }
     };
-
     initializePage();
   }, [router]);
 
-  // Fetch interviews from API
   const fetchInterviews = async (createdBy?: string) => {
     try {
       setLoading(true);
-      const url = createdBy
-        ? `/api/interviews?createdBy=${createdBy}`
-        : "/api/interviews";
-
+      const url = createdBy ? `/api/interviews?createdBy=${createdBy}` : "/api/interviews";
       const response = await fetch(url);
       const data = await response.json();
 
@@ -122,9 +122,9 @@ const InterviewPage = () => {
             id: interview.id,
             name: interview.name,
             subject: interview.subject,
+            timeLimit: interview.timeLimit || 30,
             questions: interview.questions || [],
-            questionCount:
-              interview.questionCount || interview.questions?.length || 0,
+            questionCount: interview.questionCount || interview.questions?.length || 0,
             candidatesCount: interview.responseCount || 0,
             createdAt: new Date(interview.createdAt).toLocaleDateString(),
             isActive: interview.isActive,
@@ -135,103 +135,15 @@ const InterviewPage = () => {
       }
     } catch (error) {
       console.error("Error fetching interviews:", error);
-      toast.error("Error loading interviews");
     } finally {
       setLoading(false);
     }
   };
 
-  const questionSuggestions: Question[] = [
-    // Software Engineering Questions
-    {
-      id: "sq1",
-      text: "What is object-oriented programming?",
-      subject: "Software Engineering",
-    },
-    {
-      id: "sq2",
-      text: "Explain design patterns and their importance.",
-      subject: "Software Engineering",
-    },
-    {
-      id: "sq3",
-      text: "What is microservices architecture?",
-      subject: "Software Engineering",
-    },
-    {
-      id: "sq4",
-      text: "Describe the MVC (Model-View-Controller) pattern.",
-      subject: "Software Engineering",
-    },
-    {
-      id: "sq5",
-      text: "What is Test-Driven Development (TDD)?",
-      subject: "Software Engineering",
-    },
-    {
-      id: "sq6",
-      text: "Explain the concept of RESTful APIs.",
-      subject: "Software Engineering",
-    },
-    {
-      id: "sq7",
-      text: "What is version control and why is it important?",
-      subject: "Software Engineering",
-    },
-    {
-      id: "sq8",
-      text: "Describe the difference between unit testing and integration testing.",
-      subject: "Software Engineering",
-    },
-    // Cloud Computing Questions
-    {
-      id: "sq9",
-      text: "What is Infrastructure as a Service (IaaS)?",
-      subject: "Cloud Computing",
-    },
-    {
-      id: "sq10",
-      text: "Explain containerization and its benefits.",
-      subject: "Cloud Computing",
-    },
-    {
-      id: "sq11",
-      text: "What is serverless computing?",
-      subject: "Cloud Computing",
-    },
-    {
-      id: "sq12",
-      text: "Describe the differences between public, private, and hybrid clouds.",
-      subject: "Cloud Computing",
-    },
-    {
-      id: "sq13",
-      text: "What is auto-scaling in cloud computing?",
-      subject: "Cloud Computing",
-    },
-    {
-      id: "sq14",
-      text: "Explain the concept of load balancing.",
-      subject: "Cloud Computing",
-    },
-    {
-      id: "sq15",
-      text: "What are the benefits of using cloud storage?",
-      subject: "Cloud Computing",
-    },
-    {
-      id: "sq16",
-      text: "Describe the shared responsibility model in cloud security.",
-      subject: "Cloud Computing",
-    },
-  ];
-
-  const subjects = ["Software Engineering", "Cloud Computing"];
-
   const addQuestion = () => {
-    if (currentQuestion.text && currentInterview.subject) {
+    if (currentQuestion.text.trim() && currentInterview.subject) {
       const newQuestion: Question = {
-        id: `q${Date.now()}`,
+        id: `q${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         text: currentQuestion.text,
         subject: currentInterview.subject,
       };
@@ -240,20 +152,7 @@ const InterviewPage = () => {
         ...prev,
         questions: [...(prev.questions || []), newQuestion],
       }));
-
       setCurrentQuestion({ text: "" });
-    }
-  };
-
-  const addSuggestedQuestion = (question: Question) => {
-    if (currentInterview.subject === question.subject) {
-      setCurrentInterview((prev) => ({
-        ...prev,
-        questions: [
-          ...(prev.questions || []),
-          { ...question, id: `q${Date.now()}` },
-        ],
-      }));
     }
   };
 
@@ -265,14 +164,46 @@ const InterviewPage = () => {
     }));
   };
 
+  const generateAIQuestions = async () => {
+    if (!currentInterview.subject) {
+      toast.error("Please select a subject first!");
+      return;
+    }
+    
+    setAiLoading(true);
+    try {
+      const response = await fetch("/api/interviews/ai-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: currentInterview.subject, count: 5 }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success("AI generated questions successfully!");
+        const newQuestions = data.data.map((q: any) => ({
+          ...q,
+          id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }));
+        
+        setCurrentInterview((prev) => ({
+          ...prev,
+          questions: [...(prev.questions || []), ...newQuestions],
+        }));
+      } else {
+        toast.error(data.error || "Failed to generate AI questions");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error generating questions");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const saveInterview = async () => {
-    if (
-      !currentInterview.name ||
-      !currentInterview.subject ||
-      !currentInterview.questions?.length ||
-      !userId
-    ) {
-      toast.error("Please fill all required fields");
+    if (!currentInterview.name || !currentInterview.subject || !currentInterview.questions?.length || !userId) {
+      toast.error("Please fill all required fields and add questions.");
       return;
     }
 
@@ -280,867 +211,374 @@ const InterviewPage = () => {
       const payload = {
         name: currentInterview.name,
         subject: currentInterview.subject,
+        timeLimit: currentInterview.timeLimit,
         createdBy: userId,
-        questions: currentInterview.questions.map((q) => ({
-          text: q.text,
-          subject: q.subject,
-        })),
+        questions: currentInterview.questions.map((q) => ({ text: q.text, subject: q.subject })),
       };
-
-      console.log("Sending interview data:", payload);
 
       const response = await fetch("/api/interviews", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       const data = await response.json();
-      console.log("Response:", data);
-
       if (response.ok && data.success) {
         toast.success("Interview created successfully!");
-        setCurrentInterview({
-          name: "",
-          subject: "",
-          questions: [],
-        });
+        setCurrentInterview({ name: "", subject: "", timeLimit: 30, questions: [] });
         setIsCreateDialogOpen(false);
-        // Refresh interviews list
-        await fetchInterviews(userId);
+        fetchInterviews(userId);
       } else {
-        const errorMessage =
-          data.error || data.message || "Failed to create interview";
-        console.error("Error from API:", errorMessage);
-        toast.error(errorMessage);
+        toast.error(data.message || "Failed to create interview");
       }
     } catch (error) {
-      console.error("Error creating interview:", error);
       toast.error("Error creating interview: " + (error as Error).message);
     }
   };
 
-  const cancelInterview = () => {
-    setCurrentInterview({
-      name: "",
-      subject: "",
-      questions: [],
-    });
-    setIsCreateDialogOpen(false);
-  };
-
-  const viewInterview = async (interview: Interview) => {
-    try {
-      // Fetch full interview details with questions
-      const response = await fetch(`/api/interviews/${interview.id}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setSelectedInterview({
-          ...interview,
-          questions: data.data.questions || [],
-        });
-        setIsViewDialogOpen(true);
-      } else {
-        toast.error("Failed to load interview details");
-      }
-    } catch (error) {
-      console.error("Error fetching interview details:", error);
-      toast.error("Error loading interview details");
-    }
-  };
-
-  const editInterview = async (interview: Interview) => {
-    try {
-      // Fetch full interview details with questions
-      const response = await fetch(`/api/interviews/${interview.id}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setCurrentInterview({
-          id: interview.id,
-          name: interview.name,
-          subject: interview.subject,
-          questions: data.data.questions || [],
-          candidatesCount: interview.candidatesCount,
-          createdAt: interview.createdAt,
-        });
-        setIsEditDialogOpen(true);
-      } else {
-        toast.error("Failed to load interview details");
-      }
-    } catch (error) {
-      console.error("Error fetching interview details:", error);
-      toast.error("Error loading interview details");
-    }
-  };
-
   const updateInterview = async () => {
-    if (
-      !currentInterview.name ||
-      !currentInterview.subject ||
-      !currentInterview.questions?.length ||
-      !currentInterview.id
-    ) {
+    if (!currentInterview.name || !currentInterview.subject || !currentInterview.questions?.length || !currentInterview.id) {
       toast.error("Please fill all required fields");
       return;
     }
 
     try {
       const response = await fetch(`/api/interviews/${currentInterview.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: currentInterview.name,
           subject: currentInterview.subject,
-          questions: currentInterview.questions.map((q) => ({
-            text: q.text,
-            subject: q.subject,
-          })),
+          timeLimit: currentInterview.timeLimit,
+          questions: currentInterview.questions.map((q) => ({ text: q.text, subject: q.subject })),
         }),
       });
 
       const data = await response.json();
-
       if (response.ok && data.success) {
         toast.success("Interview updated successfully!");
-        setCurrentInterview({
-          name: "",
-          subject: "",
-          questions: [],
-        });
+        setCurrentInterview({ name: "", subject: "", timeLimit: 30, questions: [] });
         setIsEditDialogOpen(false);
-        // Refresh interviews list
-        await fetchInterviews(userId);
+        fetchInterviews(userId);
       } else {
         toast.error(data.message || "Failed to update interview");
       }
     } catch (error) {
-      console.error("Error updating interview:", error);
       toast.error("Error updating interview");
     }
   };
 
-  const cancelEdit = () => {
-    setCurrentInterview({
-      name: "",
-      subject: "",
-      questions: [],
-    });
-    setIsEditDialogOpen(false);
-  };
-
-  const deleteInterview = async (interviewId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this interview? This will also delete all student responses."
-      )
-    ) {
-      return;
-    }
-
+  const deleteInterview = async (id: string) => {
+    if (!confirm("Are you sure? This will delete all student responses attached to it.")) return;
     try {
-      const response = await fetch(`/api/interviews/${interviewId}`, {
-        method: "DELETE",
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      const response = await fetch(`/api/interviews/${id}`, { method: "DELETE" });
+      if (response.ok) {
         toast.success("Interview deleted successfully!");
         setIsViewDialogOpen(false);
-        // Refresh interviews list
-        await fetchInterviews(userId);
+        fetchInterviews(userId);
       } else {
-        toast.error(data.message || "Failed to delete interview");
+        toast.error("Failed to delete interview");
       }
-    } catch (error) {
-      console.error("Error deleting interview:", error);
+    } catch (err) {
       toast.error("Error deleting interview");
     }
   };
 
-  // Copy interview link to clipboard
   const copyInterviewLink = async (interviewId: string) => {
-    const baseUrl = window.location.origin;
-    const link = `${baseUrl}/interviewee/${interviewId}`;
-
+    const link = `${window.location.origin}/interviewee/${interviewId}`;
     try {
       await navigator.clipboard.writeText(link);
       setCopiedId(interviewId);
-      toast.success("Interview link copied to clipboard!");
-
-      // Reset copied state after 2 seconds
-      setTimeout(() => {
-        setCopiedId(null);
-      }, 2000);
-    } catch (error) {
-      console.error("Failed to copy link:", error);
-      toast.error("Failed to copy link");
+      toast.success("Link copied!");
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (e) {
+      toast.error("Failed to copy");
     }
   };
 
-  // Navigate to results page
-  const viewResults = (interviewId: string) => {
-    router.push(`/interview/${interviewId}/results`);
+  const prepareEdit = async (interview: Interview) => {
+    try {
+      const res = await fetch(`/api/interviews/${interview.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setCurrentInterview({
+          ...interview,
+          questions: data.data.questions || [],
+        });
+        setIsEditDialogOpen(true);
+      }
+    } catch (e) {
+      toast.error("Error loading interview details");
+    }
+  };
+
+  const prepareView = async (interview: Interview) => {
+    try {
+      const res = await fetch(`/api/interviews/${interview.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setSelectedInterview({ ...interview, questions: data.data.questions || [] });
+        setIsViewDialogOpen(true);
+      }
+    } catch (e) {
+      toast.error("Error preparing view details");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white p-6">
-      <Toaster position="top-right" />
-      <div className="max-w-7xl mx-auto">
-        {/* Loading State */}
-        {loading ? (
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
-              <p className="text-gray-600">Loading interviews...</p>
-            </div>
+    <div className="min-h-screen bg-slate-950 text-slate-50 p-6 sm:p-10 selection:bg-indigo-500/30">
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] -z-10 opacity-20" />
+      <Toaster position="top-right" toastOptions={{ style: { background: '#1e293b', color: '#f8fafc', border: '1px solid #334155' } }} />
+
+      <div className="max-w-7xl mx-auto space-y-10">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center py-6 gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+              Interviews Hub
+            </h1>
+            <p className="text-slate-400 text-lg">Create, manage, and analyze your AI-powered candidate interviews.</p>
           </div>
-        ) : (
-          <>
-            {/* Header with Subject Filter and Create Button */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center space-x-4">
-                <Label
-                  htmlFor="subject-filter"
-                  className="text-lg font-medium text-gray-700"
-                >
-                  Filter by Subject:
-                </Label>
-                <Select
-                  value={selectedSubjectFilter}
-                  onValueChange={setSelectedSubjectFilter}
-                >
-                  <SelectTrigger className="w-64">
-                    <SelectValue placeholder="All Subjects" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Subjects</SelectItem>
-                    {subjects.map((subject) => (
-                      <SelectItem key={subject} value={subject}>
-                        {subject}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 transition-all rounded-full px-6 h-12">
+                <PlusCircle className="mr-2 h-5 w-5" />
+                New Interview
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-slate-900 border-slate-800 text-slate-100">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold">Create New Interview</DialogTitle>
+                <DialogDescription className="text-slate-400">Configure parameters and utilize AI to generate relevant questions.</DialogDescription>
+              </DialogHeader>
 
-              <Dialog
-                open={isCreateDialogOpen}
-                onOpenChange={setIsCreateDialogOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button className="bg-green-600 hover:bg-green-700 text-white">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Create New Interview
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Create New Interview</DialogTitle>
-                    <DialogDescription>
-                      Set up a new mock interview with custom questions and
-                      suggested questions to choose from.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-6">
-                    {/* Interview Basic Info */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="interview-name">Interview Name</Label>
-                        <Input
-                          id="interview-name"
-                          placeholder="Enter interview name"
-                          value={currentInterview.name || ""}
-                          onChange={(e) =>
-                            setCurrentInterview((prev) => ({
-                              ...prev,
-                              name: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="subject">Subject</Label>
-                        <Select
-                          value={currentInterview.subject || ""}
-                          onValueChange={(value) =>
-                            setCurrentInterview((prev) => ({
-                              ...prev,
-                              subject: value,
-                            }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select subject" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {subjects.map((subject) => (
-                              <SelectItem key={subject} value={subject}>
-                                {subject}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Add Custom Question */}
-                    <div className="border border-green-200 rounded-lg p-4 bg-green-50">
-                      <h3 className="font-semibold text-green-800 mb-3">
-                        Add Custom Question
-                      </h3>
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="question-text">Question</Label>
-                          <Textarea
-                            id="question-text"
-                            placeholder="Enter your question"
-                            value={currentQuestion.text}
-                            onChange={(e) =>
-                              setCurrentQuestion((prev) => ({
-                                ...prev,
-                                text: e.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="flex justify-end items-end">
-                          <Button
-                            onClick={addQuestion}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            Add Question
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Question Suggestions */}
-                    {currentInterview.subject && (
-                      <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                        <h3 className="font-semibold text-blue-800 mb-3">
-                          Question Suggestions for {currentInterview.subject}
-                        </h3>
-                        <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-                          {questionSuggestions
-                            .filter(
-                              (q) => q.subject === currentInterview.subject
-                            )
-                            .map((question) => (
-                              <div
-                                key={question.id}
-                                className="flex items-center justify-between bg-white p-3 rounded border hover:bg-gray-50 transition-colors"
-                              >
-                                <div className="flex-1">
-                                  <p className="text-sm">{question.text}</p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => addSuggestedQuestion(question)}
-                                  className="ml-3 text-blue-600 border-blue-300 hover:bg-blue-50"
-                                >
-                                  Add
-                                </Button>
-                              </div>
-                            ))}
-                          {questionSuggestions.filter(
-                            (q) => q.subject === currentInterview.subject
-                          ).length === 0 && (
-                            <p className="text-gray-500 text-center py-4">
-                              No suggestions available for this subject.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Selected Questions */}
-                    {currentInterview.questions &&
-                      currentInterview.questions.length > 0 && (
-                        <div className="border border-gray-200 rounded-lg p-4">
-                          <h3 className="font-semibold text-gray-800 mb-3">
-                            Selected Questions (
-                            {currentInterview.questions.length})
-                          </h3>
-                          <div className="space-y-2">
-                            {currentInterview.questions.map(
-                              (question, index) => (
-                                <div
-                                  key={question.id}
-                                  className="flex items-center justify-between bg-gray-50 p-3 rounded border"
-                                >
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium">
-                                      Q{index + 1}: {question.text}
-                                    </p>
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => removeQuestion(question.id)}
-                                    className="ml-3"
-                                  >
-                                    Remove
-                                  </Button>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Action Buttons */}
-                    <div className="flex justify-end space-x-3 pt-4 border-t">
-                      <Button variant="outline" onClick={cancelInterview}>
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={saveInterview}
-                        className="bg-green-600 hover:bg-green-700"
-                        disabled={
-                          !currentInterview.name ||
-                          !currentInterview.subject ||
-                          !currentInterview.questions?.length
-                        }
-                      >
-                        Save Interview
-                      </Button>
-                    </div>
+              <div className="space-y-8 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="interview-name" className="text-slate-300">Interview Name</Label>
+                    <Input
+                      id="interview-name"
+                      placeholder="e.g. Mid-Level Frontend React"
+                      value={currentInterview.name || ""}
+                      className="bg-slate-950 border-slate-800 focus:border-indigo-500"
+                      onChange={(e) => setCurrentInterview(p => ({ ...p, name: e.target.value }))}
+                    />
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* View Interview Dialog */}
-            <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Interview Details</DialogTitle>
-                  <DialogDescription>
-                    View interview questions and manage interview settings.
-                  </DialogDescription>
-                </DialogHeader>
-
-                {selectedInterview && (
-                  <div className="space-y-6">
-                    {/* Interview Info */}
-                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <h3 className="font-semibold text-gray-800 mb-3">
-                        Interview Information
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm text-gray-600">Name:</span>
-                          <p className="font-medium">
-                            {selectedInterview.name}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-600">
-                            Subject:
-                          </span>
-                          <p className="font-medium">
-                            {selectedInterview.subject}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-600">
-                            Questions:
-                          </span>
-                          <p className="font-medium">
-                            {selectedInterview.questions.length}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-600">
-                            Candidates:
-                          </span>
-                          <p className="font-medium text-green-600">
-                            {selectedInterview.candidatesCount}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-600">
-                            Created:
-                          </span>
-                          <p className="font-medium">
-                            {selectedInterview.createdAt}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Questions List */}
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <h3 className="font-semibold text-gray-800 mb-3">
-                        Questions
-                      </h3>
-                      <div className="space-y-3">
-                        {selectedInterview.questions.map((question, index) => (
-                          <div
-                            key={question.id}
-                            className="bg-gray-50 p-3 rounded border"
-                          >
-                            <p className="text-sm font-medium">
-                              Q{index + 1}: {question.text}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex justify-between pt-4 border-t">
-                      <Button
-                        variant="destructive"
-                        onClick={() =>
-                          selectedInterview &&
-                          deleteInterview(selectedInterview.id)
-                        }
-                      >
-                        Delete Interview
-                      </Button>
-                      <div className="flex space-x-3">
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsViewDialogOpen(false)}
-                        >
-                          Close
-                        </Button>
-                        <Button
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => {
-                            setIsViewDialogOpen(false);
-                            if (selectedInterview) {
-                              editInterview(selectedInterview);
-                            }
-                          }}
-                        >
-                          Edit Interview
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="subject" className="text-slate-300">Subject / Category</Label>
+                    <Select value={currentInterview.subject || ""} onValueChange={(val) => setCurrentInterview(p => ({ ...p, subject: val }))}>
+                      <SelectTrigger className="bg-slate-950 border-slate-800">
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+                        {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-              </DialogContent>
-            </Dialog>
-
-            {/* Edit Interview Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Edit Interview</DialogTitle>
-                  <DialogDescription>
-                    Modify interview details and questions.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-6">
-                  {/* Interview Basic Info */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="edit-interview-name">
-                        Interview Name
-                      </Label>
-                      <Input
-                        id="edit-interview-name"
-                        placeholder="Enter interview name"
-                        value={currentInterview.name || ""}
-                        onChange={(e) =>
-                          setCurrentInterview((prev) => ({
-                            ...prev,
-                            name: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="edit-subject">Subject</Label>
-                      <Select
-                        value={currentInterview.subject || ""}
-                        onValueChange={(value) =>
-                          setCurrentInterview((prev) => ({
-                            ...prev,
-                            subject: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select subject" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {subjects.map((subject) => (
-                            <SelectItem key={subject} value={subject}>
-                              {subject}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Add Custom Question */}
-                  <div className="border border-green-200 rounded-lg p-4 bg-green-50">
-                    <h3 className="font-semibold text-green-800 mb-3">
-                      Add Custom Question
-                    </h3>
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="edit-question-text">Question</Label>
-                        <Textarea
-                          id="edit-question-text"
-                          placeholder="Enter your question"
-                          value={currentQuestion.text}
-                          onChange={(e) =>
-                            setCurrentQuestion((prev) => ({
-                              ...prev,
-                              text: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="flex justify-end items-end">
-                        <Button
-                          onClick={addQuestion}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          Add Question
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Question Suggestions */}
-                  {currentInterview.subject && (
-                    <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                      <h3 className="font-semibold text-blue-800 mb-3">
-                        Question Suggestions for {currentInterview.subject}
-                      </h3>
-                      <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-                        {questionSuggestions
-                          .filter((q) => q.subject === currentInterview.subject)
-                          .map((question) => (
-                            <div
-                              key={question.id}
-                              className="flex items-center justify-between bg-white p-3 rounded border hover:bg-gray-50 transition-colors"
-                            >
-                              <div className="flex-1">
-                                <p className="text-sm">{question.text}</p>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => addSuggestedQuestion(question)}
-                                className="ml-3 text-blue-600 border-blue-300 hover:bg-blue-50"
-                              >
-                                Add
-                              </Button>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Selected Questions */}
-                  {currentInterview.questions &&
-                    currentInterview.questions.length > 0 && (
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <h3 className="font-semibold text-gray-800 mb-3">
-                          Selected Questions (
-                          {currentInterview.questions.length})
-                        </h3>
-                        <div className="space-y-2">
-                          {currentInterview.questions.map((question, index) => (
-                            <div
-                              key={question.id}
-                              className="flex items-center justify-between bg-gray-50 p-3 rounded border"
-                            >
-                              <div className="flex-1">
-                                <p className="text-sm font-medium">
-                                  Q{index + 1}: {question.text}
-                                </p>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => removeQuestion(question.id)}
-                                className="ml-3"
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Action Buttons */}
-                  <div className="flex justify-end space-x-3 pt-4 border-t">
-                    <Button variant="outline" onClick={cancelEdit}>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={updateInterview}
-                      className="bg-green-600 hover:bg-green-700"
-                      disabled={
-                        !currentInterview.name ||
-                        !currentInterview.subject ||
-                        !currentInterview.questions?.length
-                      }
-                    >
-                      Update Interview
-                    </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="time-limit" className="text-slate-300">Time Limit (mins)</Label>
+                    <Input
+                      id="time-limit"
+                      type="number"
+                      min={5}
+                      max={180}
+                      value={currentInterview.timeLimit}
+                      className="bg-slate-950 border-slate-800 focus:border-indigo-500"
+                      onChange={(e) => setCurrentInterview(p => ({ ...p, timeLimit: parseInt(e.target.value) || 30 }))}
+                    />
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
 
-            {/* Interviews Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {interviews
-                .filter(
-                  (interview) =>
-                    selectedSubjectFilter === "all" ||
-                    interview.subject === selectedSubjectFilter
-                )
-                .map((interview) => (
-                  <Card
-                    key={interview.id}
-                    className="bg-white shadow-sm border border-green-100 hover:shadow-md transition-shadow flex flex-col"
-                  >
-                    <CardHeader className="pb-3 flex-none">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg text-gray-900">
-                          {interview.name}
-                        </CardTitle>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Left Column: Generator / Adder */}
+                  <div className="space-y-6">
+                    <div className="bg-slate-800/50 border border-indigo-500/30 rounded-xl p-5 shadow-inner">
+                      <div className="flex items-center space-x-2 text-indigo-400 mb-4">
+                        <Sparkles className="h-5 w-5" />
+                        <h3 className="font-semibold text-lg">AI Assistant</h3>
                       </div>
-                      <CardDescription className="flex items-center space-x-2">
-                        <BookOpen className="h-4 w-4 text-green-600" />
-                        <span>{interview.subject}</span>
-                      </CardDescription>
-                    </CardHeader>
+                      <p className="text-sm text-slate-400 mb-4">Let our AI generate 5 tailored questions based on the selected subject.</p>
+                      <Button 
+                        onClick={generateAIQuestions} 
+                        disabled={aiLoading || !currentInterview.subject}
+                        className="w-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/50 hover:bg-indigo-500/40"
+                      >
+                        {aiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCcw className="h-4 w-4 mr-2" />}
+                        Generate AI Questions
+                      </Button>
+                    </div>
 
-                    <CardContent className="space-y-4 flex-1 flex flex-col justify-end">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Questions:</span>
-                          <span className="font-medium">
-                            {interview.questions.length}
-                          </span>
-                        </div>
+                    <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-5">
+                      <h3 className="font-semibold text-slate-300 mb-4">Manual Addition</h3>
+                      <Textarea
+                        placeholder="Write your custom question here..."
+                        value={currentQuestion.text}
+                        className="bg-slate-900 border-slate-700 min-h-[100px] mb-4"
+                        onChange={(e) => setCurrentQuestion({ text: e.target.value })}
+                      />
+                      <Button onClick={addQuestion} className="w-full bg-slate-700 hover:bg-slate-600 text-white">
+                        Add Question Manually
+                      </Button>
+                    </div>
+                  </div>
 
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 flex items-center space-x-1">
-                            <Users className="h-4 w-4" />
-                            <span>Candidates:</span>
-                          </span>
-                          <span className="font-medium text-green-600">
-                            {interview.candidatesCount}
-                          </span>
+                  {/* Right Column: List of selected questions */}
+                  <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex flex-col">
+                    <h3 className="font-semibold text-slate-300 mb-4 flex justify-between items-center">
+                      <span>Selected Questions</span>
+                      <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-300">
+                        {currentInterview.questions?.length || 0}
+                      </Badge>
+                    </h3>
+                    
+                    <div className="flex-1 overflow-y-auto max-h-[400px] space-y-3 pr-2 custom-scrollbar">
+                      {(!currentInterview.questions || currentInterview.questions.length === 0) ? (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-500 py-10">
+                          <BookOpen className="h-10 w-10 mb-3 opacity-20" />
+                          <p>No questions added yet.</p>
                         </div>
+                      ) : (
+                        currentInterview.questions.map((q, i) => (
+                          <div key={q.id} className="group relative bg-slate-800 border border-slate-700 p-4 rounded-lg flex gap-3 transition-all hover:border-slate-600">
+                            <span className="text-indigo-400 font-mono text-sm mt-0.5">{String(i + 1).padStart(2, '0')}.</span>
+                            <p className="flex-1 text-sm text-slate-300 leading-relaxed">{q.text}</p>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-7 w-7 text-slate-500 hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => removeQuestion(q.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Created:</span>
-                          <span className="font-medium">
-                            {interview.createdAt}
-                          </span>
-                        </div>
+              <div className="flex justify-end gap-3 pt-6 border-t border-slate-800 mt-6">
+                <Button variant="ghost" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-slate-800">Cancel</Button>
+                <Button onClick={saveInterview} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8">Save Interview</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </header>
+
+        {loading ? (
+          <div className="h-[50vh] flex items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {interviews.length === 0 ? (
+              <div className="col-span-full py-20 bg-slate-900/40 border border-slate-800 border-dashed rounded-3xl flex flex-col items-center justify-center">
+                <Sparkles className="h-16 w-16 text-indigo-500/50 mb-6" />
+                <h2 className="text-2xl font-bold text-slate-200 mb-2">No Interviews Found</h2>
+                <p className="text-slate-500 mb-6">You haven't created any AI mock interviews yet.</p>
+                <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 rounded-full">
+                  Create First Interview
+                </Button>
+              </div>
+            ) : (
+              interviews.map(interview => (
+                <Card key={interview.id} className="bg-slate-900/80 border-slate-800 hover:border-indigo-500/50 transition-all duration-300 group flex flex-col overflow-hidden backdrop-blur-sm">
+                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <CardHeader className="pb-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <Badge className="bg-slate-800 text-indigo-300 border-slate-700 hover:bg-slate-700">{interview.subject}</Badge>
+                      <div className="flex items-center text-xs text-slate-500">
+                        <Clock className="w-3.5 h-3.5 mr-1" />
+                        {interview.timeLimit}m
                       </div>
+                    </div>
+                    <CardTitle className="text-xl text-slate-100 font-semibold line-clamp-1">{interview.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col justify-end px-6 pb-6 gap-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-950/50 rounded-lg p-3 text-center border border-slate-800/50">
+                        <p className="text-sm text-slate-400 mb-1">Questions</p>
+                        <p className="text-xl font-mono font-medium text-slate-200">{interview.questionCount}</p>
+                      </div>
+                      <div className="bg-slate-950/50 rounded-lg p-3 text-center border border-slate-800/50">
+                        <p className="text-sm text-slate-400 mb-1">Candidates</p>
+                        <p className="text-xl font-mono font-medium text-cyan-400">{interview.candidatesCount}</p>
+                      </div>
+                    </div>
 
-                      <div className="flex space-x-2 pt-2">
-                        <Button
-                          size="sm"
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                          onClick={() => viewInterview(interview)}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <Button 
+                          className="flex-1 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 border border-indigo-500/20"
+                          onClick={() => prepareView(interview)}
                         >
-                          View Details
+                          Details
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex items-center"
-                          onClick={() => editInterview(interview)}
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          className="w-10 bg-slate-900 border-slate-700 hover:bg-slate-800 hover:text-indigo-400"
+                          onClick={() => prepareEdit(interview)}
                         >
-                          <Edit3 className="h-3 w-3" />
+                          <Edit3 className="w-4 h-4" />
                         </Button>
                       </div>
-
-                      {/* New Action Buttons */}
-                      <div className="flex space-x-2 pt-2">
-                        <Button
-                          size="sm"
+                      <div className="flex gap-2">
+                        <Button 
                           variant="outline"
-                          className="flex-1"
+                          className="flex-1 bg-slate-900 border-slate-700 hover:bg-slate-800"
                           onClick={() => copyInterviewLink(interview.id)}
                         >
-                          {copiedId === interview.id ? (
-                            <>
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Link2 className="h-3 w-3 mr-1" />
-                              Copy Link
-                            </>
-                          )}
+                          {copiedId === interview.id ? <CheckCircle2 className="w-4 h-4 mr-2 text-green-400" /> : <Link2 className="w-4 h-4 mr-2" />}
+                          {copiedId === interview.id ? "Copied" : "Copy Link"}
                         </Button>
-                        <Button
-                          size="sm"
+                        <Button 
                           variant="outline"
-                          className="flex-1"
-                          onClick={() => viewResults(interview.id)}
+                          className="flex-1 bg-slate-900 border-slate-700 hover:bg-slate-800 hover:text-cyan-400"
+                          onClick={() => router.push(`/interview/${interview.id}/results`)}
                         >
-                          <BarChart3 className="h-3 w-3 mr-1" />
+                          <BarChart3 className="w-4 h-4 mr-2" />
                           Results
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-
-            {interviews.filter(
-              (interview) =>
-                selectedSubjectFilter === "all" ||
-                interview.subject === selectedSubjectFilter
-            ).length === 0 && (
-              <div className="text-center py-12">
-                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="h-8 w-8 text-green-600" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {selectedSubjectFilter === "all"
-                    ? "No interviews yet"
-                    : `No interviews found for ${selectedSubjectFilter}`}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {selectedSubjectFilter === "all"
-                    ? "Create your first mock interview to get started"
-                    : `Create a new interview for ${selectedSubjectFilter} or change the filter`}
-                </p>
-                <Button
-                  onClick={() => setIsCreateDialogOpen(true)}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Create Interview
-                </Button>
-              </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
             )}
-          </>
+          </div>
         )}
       </div>
+
+      {/* Reusable View/Edit logic mapped exactly to new UI styling... */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        {/* Simple mapping for view dialog in Dark Mode... */}
+        <DialogContent className="max-w-2xl bg-slate-900 border-slate-800 text-slate-200">
+          <DialogHeader><DialogTitle>Interview Context</DialogTitle></DialogHeader>
+          {selectedInterview && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800">
+                  <div><p className="text-slate-500 text-sm">Target Subject</p><p className="font-semibold text-indigo-400">{selectedInterview.subject}</p></div>
+                  <div><p className="text-slate-500 text-sm">Time Target</p><p className="font-semibold">{selectedInterview.timeLimit} Minutes</p></div>
+                  <div><p className="text-slate-500 text-sm">Created</p><p>{selectedInterview.createdAt}</p></div>
+                  <div><p className="text-slate-500 text-sm">Submissions</p><p className="text-cyan-400">{selectedInterview.candidatesCount}</p></div>
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-medium text-slate-400">Knowledge Checks</h3>
+                {selectedInterview.questions?.map((q, i) => (
+                  <div key={q.id} className="p-3 bg-slate-800/50 rounded-lg border border-slate-800 text-sm text-slate-300">
+                    <span className="text-indigo-500 mr-2 opacity-60">Q{i+1}.</span>{q.text}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between pt-4 border-t border-slate-800">
+                 <Button variant="destructive" onClick={() => deleteInterview(selectedInterview.id)} className="bg-red-500/20 text-red-500 hover:bg-red-500/30">Delete Sandbox</Button>
+                 <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => { setIsViewDialogOpen(false); prepareEdit(selectedInterview); }}>Modify Template</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default InterviewPage;
+}

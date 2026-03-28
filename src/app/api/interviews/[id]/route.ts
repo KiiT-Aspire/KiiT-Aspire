@@ -57,7 +57,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, subject, questions, isActive } = body;
+    const { name, subject, questions, isActive, timeLimit } = body;
 
     // Check if interview exists
     const [existingInterview] = await db
@@ -78,6 +78,7 @@ export async function PUT(
     if (name !== undefined) updateData.name = name;
     if (subject !== undefined) updateData.subject = subject;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (timeLimit !== undefined) updateData.timeLimit = parseInt(timeLimit.toString());
 
     const [updatedInterview] = await db
       .update(interviews)

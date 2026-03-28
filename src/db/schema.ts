@@ -71,6 +71,7 @@ export const interviews = pgTable("interviews", {
   // .references(() => user.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   subject: text("subject").notNull(),
+  timeLimit: integer("time_limit").notNull().default(30), // in minutes
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())

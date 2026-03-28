@@ -54,7 +54,7 @@ interface Statistics {
   completionRate: number;
 }
 
-const ResultsPage = () => {
+export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
   const interviewId = params.id as string;
@@ -74,13 +74,13 @@ const ResultsPage = () => {
       fetchInterview();
       fetchResponses();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interviewId, statusFilter, sortBy, currentPage]);
 
   const fetchInterview = async () => {
     try {
       const response = await fetch(`/api/interviews/${interviewId}`);
       const data = await response.json();
-
       if (data.success) {
         setInterviewName(data.data.name);
       }
@@ -106,10 +106,7 @@ const ResultsPage = () => {
       );
       const data = await response.json();
 
-      console.log("API Response:", data);
-
       if (data.success) {
-        // Map the response data to match the expected format
         const mappedResponses = (data.data || []).map((r: any) => ({
           id: r.id,
           studentName: r.studentName,
@@ -122,12 +119,6 @@ const ResultsPage = () => {
             ? Math.floor((new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()) / 1000)
             : null,
         }));
-
-        console.log("📊 Statistics from API:", data.statistics);
-        console.log("📈 Average Score:", data.statistics?.averageScore);
-        console.log("✅ Completed Count:", data.statistics?.completedCount);
-        console.log("🔄 In Progress:", data.statistics?.inProgressCount);
-        console.log("❌ Abandoned:", data.statistics?.abandonedCount);
 
         setResponses(mappedResponses);
         setStatistics({
@@ -147,7 +138,6 @@ const ResultsPage = () => {
         toast.error(data.error || "Failed to load results");
       }
     } catch (error) {
-      console.error("Error fetching responses:", error);
       toast.error("Error loading results");
     } finally {
       setLoading(false);
@@ -158,23 +148,20 @@ const ResultsPage = () => {
     switch (status) {
       case "completed":
         return (
-          <Badge className="bg-green-100 text-green-800 border-green-300">
-            <CheckCircle2 className="h-3 w-3 mr-1" />
-            Completed
+          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+            <CheckCircle2 className="h-3 w-3 mr-1" /> Completed
           </Badge>
         );
       case "in_progress":
         return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-300">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            In Progress
+          <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+            <AlertCircle className="h-3 w-3 mr-1" /> In Progress
           </Badge>
         );
       case "abandoned":
         return (
-          <Badge className="bg-gray-100 text-gray-800 border-gray-300">
-            <XCircle className="h-3 w-3 mr-1" />
-            Abandoned
+          <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/20">
+            <XCircle className="h-3 w-3 mr-1" /> Abandoned
           </Badge>
         );
       default:
@@ -183,14 +170,10 @@ const ResultsPage = () => {
   };
 
   const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "N/A";
+    if (!seconds) return "--";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
-  };
-
-  const viewResponseDetails = (responseId: string) => {
-    router.push(`/interview/${interviewId}/results/${responseId}`);
   };
 
   const exportToCSV = () => {
@@ -198,17 +181,9 @@ const ResultsPage = () => {
       toast.error("No data to export");
       return;
     }
-
     const headers = [
-      "Student Name",
-      "Email",
-      "Score",
-      "Status",
-      "Started At",
-      "Completed At",
-      "Time Taken (seconds)",
+      "Student Name", "Email", "Score", "Status", "Started At", "Completed At", "Time Taken (seconds)"
     ];
-
     const csvRows = [
       headers.join(","),
       ...responses.map((r) =>
@@ -223,7 +198,6 @@ const ResultsPage = () => {
         ].join(",")
       ),
     ];
-
     const csvContent = csvRows.join("\n");
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -232,84 +206,75 @@ const ResultsPage = () => {
     a.download = `interview-${interviewId}-results.csv`;
     a.click();
     URL.revokeObjectURL(url);
-
     toast.success("Results exported successfully!");
   };
 
-  // Sort responses
   const sortedResponses = [...responses].sort((a, b) => {
     switch (sortBy) {
       case "score":
         return (b.score ?? 0) - (a.score ?? 0);
       case "date":
       default:
-        return (
-          new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-        );
+        return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
     }
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white p-6">
-      <Toaster position="top-right" />
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            onClick={() => router.push("/interview")}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Interviews
-          </Button>
-
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Interview Results
-              </h1>
-              <p className="text-gray-600 mt-1">{interviewName}</p>
-            </div>
-            <Button onClick={exportToCSV} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
+    <div className="min-h-screen bg-slate-950 text-slate-50 p-6 sm:p-10">
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] -z-10 opacity-20" />
+      <Toaster position="top-right" toastOptions={{ style: { background: '#1e293b', color: '#f8fafc', border: '1px solid #334155' } }} />
+      
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/interview")}
+              className="mb-6 bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Overview
             </Button>
+            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-1">
+              Performance Dashboard
+            </h1>
+            <p className="text-slate-400">{interviewName || "Loading..."}</p>
           </div>
+          <Button onClick={exportToCSV} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
 
-        {/* Statistics Cards */}
         {statistics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardDescription>Total Attempts</CardDescription>
-                <CardTitle className="text-3xl">
+                <CardDescription className="text-slate-400">Total Attempts</CardDescription>
+                <CardTitle className="text-4xl text-slate-100 font-mono">
                   {statistics.totalResponses}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
+            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardDescription>Average Score</CardDescription>
-                <CardTitle className="text-3xl flex items-center">
-                  {typeof statistics.averageScore === 'number' && !isNaN(statistics.averageScore)
+                <CardDescription className="text-slate-400">Average Score</CardDescription>
+                <CardTitle className="text-4xl text-emerald-400 font-mono flex items-center">
+                  {typeof statistics.averageScore === 'number' && !isNaN(statistics.averageScore) && statistics.averageScore > 0
                     ? statistics.averageScore.toFixed(1)
-                    : "N/A"}
-                  {typeof statistics.averageScore === 'number' && 
-                   !isNaN(statistics.averageScore) && 
-                   statistics.averageScore > 0 && (
-                    <TrendingUp className="h-5 w-5 ml-2 text-green-600" />
+                    : "--"}
+                  {typeof statistics.averageScore === 'number' && !isNaN(statistics.averageScore) && statistics.averageScore > 0 && (
+                    <TrendingUp className="h-6 w-6 ml-2 text-emerald-500 opacity-50" />
                   )}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
+            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardDescription>Completion Rate</CardDescription>
-                <CardTitle className="text-3xl">
+                <CardDescription className="text-slate-400">Completion Rate</CardDescription>
+                <CardTitle className="text-4xl text-cyan-400 font-mono">
                   {typeof statistics.completionRate === 'number' && !isNaN(statistics.completionRate)
                     ? statistics.completionRate.toFixed(0)
                     : "0"}%
@@ -317,27 +282,21 @@ const ResultsPage = () => {
               </CardHeader>
             </Card>
 
-            <Card>
+            <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardDescription>Status Breakdown</CardDescription>
-                <div className="text-sm space-y-1 mt-2">
-                  <div className="flex justify-between">
-                    <span className="text-green-600">Completed:</span>
-                    <span className="font-medium">
-                      {statistics.completedCount}
-                    </span>
+                <CardDescription className="text-slate-400">Status Snapshot</CardDescription>
+                <div className="mt-2 space-y-2 text-sm">
+                  <div className="flex justify-between border-b border-slate-800 pb-1">
+                    <span className="text-emerald-400">Completed</span>
+                    <span className="font-mono text-slate-300">{statistics.completedCount}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-blue-600">In Progress:</span>
-                    <span className="font-medium">
-                      {statistics.inProgressCount}
-                    </span>
+                  <div className="flex justify-between border-b border-slate-800 pb-1">
+                    <span className="text-indigo-400">In Progress</span>
+                    <span className="font-mono text-slate-300">{statistics.inProgressCount}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Abandoned:</span>
-                    <span className="font-medium">
-                      {statistics.abandonedCount}
-                    </span>
+                  <div className="flex justify-between pb-1">
+                    <span className="text-slate-500">Abandoned</span>
+                    <span className="font-mono text-slate-300">{statistics.abandonedCount}</span>
                   </div>
                 </div>
               </CardHeader>
@@ -345,18 +304,15 @@ const ResultsPage = () => {
           </div>
         )}
 
-        {/* Filters */}
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex space-x-4">
-            <div>
-              <label className="text-sm text-gray-600 mr-2">
-                Filter by Status:
-              </label>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/50 p-4 border border-slate-800 rounded-xl backdrop-blur-sm">
+          <div className="flex gap-4 w-full sm:w-auto">
+            <div className="flex-1 sm:flex-none">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-2 block mb-1">Status</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40 bg-slate-950 border-slate-700 text-slate-200">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
@@ -365,13 +321,13 @@ const ResultsPage = () => {
               </Select>
             </div>
 
-            <div>
-              <label className="text-sm text-gray-600 mr-2">Sort by:</label>
+            <div className="flex-1 sm:flex-none">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-2 block mb-1">Sort</label>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40 bg-slate-950 border-slate-700 text-slate-200">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
                   <SelectItem value="date">Date</SelectItem>
                   <SelectItem value="score">Score</SelectItem>
                 </SelectContent>
@@ -380,162 +336,95 @@ const ResultsPage = () => {
           </div>
         </div>
 
-        {/* Loading State */}
         {loading ? (
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
-              <p className="text-gray-600">Loading results...</p>
-            </div>
+          <div className="flex items-center justify-center min-h-[40vh]">
+             <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
           </div>
         ) : sortedResponses.length === 0 ? (
-          <Card className="p-12 text-center">
-            <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="h-8 w-8 text-gray-600" />
+          <Card className="py-20 text-center bg-slate-900/40 border-slate-800 border-dashed rounded-3xl">
+            <div className="bg-slate-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <User className="h-10 w-10 text-slate-500" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No responses yet
-            </h3>
-            <p className="text-gray-600">
-              Students haven't taken this interview yet
-            </p>
+            <h3 className="text-xl font-medium text-slate-200 mb-2">No data available</h3>
+            <p className="text-slate-500">No candidates have taken this interview yet.</p>
           </Card>
         ) : (
-          <>
-            {/* Results Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Student Responses</CardTitle>
-                <CardDescription>
-                  Click on a row to view detailed response
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-3 text-sm font-medium text-gray-600">
-                          Student
-                        </th>
-                        <th className="text-left p-3 text-sm font-medium text-gray-600">
-                          Email
-                        </th>
-                        <th className="text-center p-3 text-sm font-medium text-gray-600">
-                          Score
-                        </th>
-                        <th className="text-center p-3 text-sm font-medium text-gray-600">
-                          Status
-                        </th>
-                        <th className="text-left p-3 text-sm font-medium text-gray-600">
-                          Started
-                        </th>
-                        <th className="text-center p-3 text-sm font-medium text-gray-600">
-                          Time Taken
-                        </th>
-                        <th className="text-center p-3 text-sm font-medium text-gray-600">
-                          Actions
-                        </th>
+          <Card className="bg-slate-900/80 border-slate-800 overflow-hidden">
+            <CardHeader className="border-b border-slate-800 bg-slate-900/50 pb-4">
+               <CardTitle className="text-lg text-slate-200">Candidate Records</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-900 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                      <th className="p-4 font-medium">Candidate</th>
+                      <th className="p-4 font-medium">Contact</th>
+                      <th className="p-4 font-medium text-center">Score</th>
+                      <th className="p-4 font-medium text-center">Status</th>
+                      <th className="p-4 font-medium">Timeline</th>
+                      <th className="p-4 font-medium text-center">Duration</th>
+                      <th className="p-4 font-medium text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50 text-sm">
+                    {sortedResponses.map((response) => (
+                      <tr
+                        key={response.id}
+                        className="hover:bg-slate-800/50 cursor-pointer transition-colors group"
+                        onClick={() => router.push(`/interview/${interviewId}/results/${response.id}`)}
+                      >
+                        <td className="p-4 flex items-center gap-3 text-slate-200 font-medium">
+                          <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition-colors">
+                            <User className="h-4 w-4" />
+                          </div>
+                          {response.studentName}
+                        </td>
+                        <td className="p-4 text-slate-400">{response.studentEmail}</td>
+                        <td className="p-4 text-center">
+                          {response.score !== null ? (
+                            <Badge className="bg-emerald-500/10 text-emerald-400 font-mono">
+                              <Award className="h-3 w-3 mr-1" />
+                              {response.score}
+                            </Badge>
+                          ) : (
+                            <span className="text-slate-600 font-mono">--</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center">{getStatusBadge(response.status)}</td>
+                        <td className="p-4">
+                          <div className="text-slate-400 font-mono text-xs space-y-1">
+                            <div className="flex items-center"><Calendar className="h-3 w-3 mr-1" /> {new Date(response.startedAt).toLocaleDateString()}</div>
+                            <div className="flex items-center"><Clock className="h-3 w-3 mr-1" /> {new Date(response.startedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                          </div>
+                        </td>
+                        <td className="p-4 text-center text-slate-400 font-mono text-xs">
+                           {formatDuration(response.timeTaken)}
+                        </td>
+                        <td className="p-4 text-center">
+                          <Button size="sm" variant="ghost" className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10">
+                            <Eye className="h-4 w-4 mr-2" /> View
+                          </Button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {sortedResponses.map((response) => (
-                        <tr
-                          key={response.id}
-                          className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
-                          onClick={() => viewResponseDetails(response.id)}
-                        >
-                          <td className="p-3">
-                            <div className="flex items-center">
-                              <User className="h-4 w-4 mr-2 text-gray-500" />
-                              <span className="font-medium">
-                                {response.studentName}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-3 text-sm text-gray-600">
-                            {response.studentEmail}
-                          </td>
-                          <td className="p-3 text-center">
-                            {response.score !== null ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                                <Award className="h-3 w-3 mr-1" />
-                                {response.score}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">N/A</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-center">
-                            {getStatusBadge(response.status)}
-                          </td>
-                          <td className="p-3 text-sm">
-                            <div className="flex items-center text-gray-600">
-                              <Calendar className="h-3 w-3 mr-1" />
-                              {new Date(response.startedAt).toLocaleDateString()}
-                              <br />
-                              <Clock className="h-3 w-3 mr-1 ml-2" />
-                              {new Date(response.startedAt).toLocaleTimeString()}
-                            </div>
-                          </td>
-                          <td className="p-3 text-center text-sm text-gray-600">
-                            <div className="flex items-center justify-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {formatDuration(response.timeTaken)}
-                            </div>
-                          </td>
-                          <td className="p-3 text-center">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                viewResponseDetails(response.id);
-                              }}
-                            >
-                              <Eye className="h-3 w-3 mr-1" />
-                              View
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center space-x-2 mt-6">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <span className="text-sm text-gray-600">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex justify-between items-center p-4 border-t border-slate-800 bg-slate-900/50 text-slate-400">
+                  <span className="text-xs">Page {currentPage} of {totalPages}</span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="bg-slate-900 border-slate-700" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
+                    <Button variant="outline" size="sm" className="bg-slate-900 border-slate-700" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</Button>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
   );
-};
-
-export default ResultsPage;
+}
