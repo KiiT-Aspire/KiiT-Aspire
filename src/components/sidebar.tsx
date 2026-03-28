@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  AudioWaveform, FileText, BarChart3, Settings, Home,
+  GraduationCap, FileText, BarChart3, Home,
   LogOut, ChevronLeft, ChevronRight
 } from "lucide-react";
 import Link from "next/link";
@@ -13,7 +13,6 @@ const menuItems = [
   { icon: Home, label: "Overview", href: "/", isExternal: true },
   { icon: FileText, label: "Interviews", href: "/interview" },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
-  { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
 export default function Sidebar() {
@@ -25,15 +24,15 @@ export default function Sidebar() {
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className={`fixed top-0 left-0 flex flex-col h-full bg-[#060606] border-r border-white/[0.06] z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 flex flex-col h-full bg-[#f0faf0] border-r border-green-200 z-50 transition-all duration-300 ${
         collapsed ? "w-16" : "w-[220px]"
       }`}
     >
       {/* Logo area */}
-      <div className="flex items-center justify-between px-4 h-[60px] border-b border-white/[0.05]">
+      <div className="flex items-center justify-between px-4 h-[60px] border-b border-green-200 bg-white/60">
         <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.35)]">
-            <AudioWaveform className="w-3.5 h-3.5 text-white" />
+          <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(22,163,74,0.3)]">
+            <GraduationCap className="w-3.5 h-3.5 text-white" />
           </div>
           <AnimatePresence>
             {!collapsed && (
@@ -42,9 +41,9 @@ export default function Sidebar() {
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.2 }}
-                className="text-[15px] font-bold text-white whitespace-nowrap overflow-hidden"
+                className="text-[15px] font-bold text-gray-800 whitespace-nowrap overflow-hidden"
               >
-                Echo<span className="text-indigo-400">Grade</span>
+                KIIT<span className="text-green-600">Aspire</span>
               </motion.span>
             )}
           </AnimatePresence>
@@ -53,20 +52,20 @@ export default function Sidebar() {
         {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden md:flex w-6 h-6 items-center justify-center rounded-[6px] text-zinc-500 hover:text-white hover:bg-white/[0.06] transition-all shrink-0"
+          className="hidden md:flex w-6 h-6 items-center justify-center rounded-[6px] text-gray-400 hover:text-green-700 hover:bg-green-100 transition-all shrink-0"
         >
           {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
         </button>
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <div className="flex-1 p-3 space-y-1 overflow-y-auto bg-[#f0faf0]">
         {/* Section label */}
         {!collapsed && (
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 px-3 pb-2 pt-1"
+            className="text-[10px] font-semibold uppercase tracking-widest text-green-700/40 px-3 pb-2 pt-1"
           >
             Navigation
           </motion.p>
@@ -85,22 +84,22 @@ export default function Sidebar() {
                 whileTap={{ scale: 0.97 }}
                 className={`relative flex items-center gap-3 px-3 py-2.5 rounded-[10px] transition-all duration-150 group cursor-pointer ${
                   isActive
-                    ? "bg-indigo-500/[0.12] text-indigo-300 border border-indigo-500/20"
-                    : "text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]"
+                    ? "bg-green-100 text-green-700 border border-green-300"
+                    : "text-gray-500 hover:text-gray-800 hover:bg-green-50"
                 }`}
               >
                 {/* Active indicator */}
                 {isActive && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full bg-indigo-400"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full bg-green-500"
                   />
                 )}
 
                 <Icon
                   size={16}
                   className={`shrink-0 transition-colors ${
-                    isActive ? "text-indigo-400" : "text-zinc-500 group-hover:text-zinc-300"
+                    isActive ? "text-green-600" : "text-gray-400 group-hover:text-gray-700"
                   }`}
                 />
 
@@ -112,7 +111,7 @@ export default function Sidebar() {
                       exit={{ opacity: 0, width: 0 }}
                       transition={{ duration: 0.2 }}
                       className={`text-[13px] font-medium whitespace-nowrap overflow-hidden ${
-                        isActive ? "text-indigo-300" : ""
+                        isActive ? "text-green-700" : ""
                       }`}
                     >
                       {item.label}
@@ -122,7 +121,7 @@ export default function Sidebar() {
 
                 {/* Tooltip for collapsed state */}
                 {collapsed && (
-                  <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-900 border border-white/10 rounded-[8px] text-[12px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-50">
+                  <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-white border border-green-200 rounded-[8px] text-[12px] text-gray-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-50">
                     {item.label}
                   </div>
                 )}
@@ -133,20 +132,20 @@ export default function Sidebar() {
       </div>
 
       {/* Bottom section */}
-      <div className="p-3 border-t border-white/[0.05]">
+      <div className="p-3 border-t border-green-200 bg-[#f0faf0]">
         {/* User Avatar Area */}
         {!collapsed && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-3 px-3 py-2.5 mb-1 rounded-[10px] bg-white/[0.02] border border-white/[0.05]"
+            className="flex items-center gap-3 px-3 py-2.5 mb-1 rounded-[10px] bg-white border border-green-200"
           >
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
               A
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-[12px] font-medium text-white truncate">Admin User</p>
-              <p className="text-[11px] text-zinc-500 truncate">admin@echograde.ai</p>
+              <p className="text-[12px] font-medium text-gray-800 truncate">Faculty</p>
+              <p className="text-[11px] text-gray-400 truncate">kiit.ac.in</p>
             </div>
           </motion.div>
         )}
@@ -155,7 +154,7 @@ export default function Sidebar() {
           <motion.div
             whileHover={{ x: 2 }}
             whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-zinc-500 hover:text-red-400 hover:bg-red-500/[0.08] transition-all group cursor-pointer"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all group cursor-pointer"
           >
             <LogOut size={16} className="shrink-0 transition-colors group-hover:text-red-400" />
             <AnimatePresence>
@@ -173,7 +172,7 @@ export default function Sidebar() {
             </AnimatePresence>
 
             {collapsed && (
-              <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-zinc-900 border border-white/10 rounded-[8px] text-[12px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-50">
+              <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-white border border-green-200 rounded-[8px] text-[12px] text-gray-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-50">
                 Sign Out
               </div>
             )}

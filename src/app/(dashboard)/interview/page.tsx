@@ -58,12 +58,12 @@ const staggerContainer: Variants = {
   visible: { transition: { staggerChildren: 0.05 } }
 };
 
-const subjectThemes: Record<string, { bg: string; text: string; ring: string; iconBg: string }> = {
-  "Software Engineering": { bg: "bg-indigo-500/10", text: "text-indigo-400", ring: "ring-indigo-500/20", iconBg: "bg-indigo-500/20" },
-  "Cloud Computing": { bg: "bg-cyan-500/10", text: "text-cyan-400", ring: "ring-cyan-500/20", iconBg: "bg-cyan-500/20" },
-  "Data Science": { bg: "bg-violet-500/10", text: "text-violet-400", ring: "ring-violet-500/20", iconBg: "bg-violet-500/20" },
-  "System Design": { bg: "bg-amber-500/10", text: "text-amber-400", ring: "ring-amber-500/20", iconBg: "bg-amber-500/20" },
-  "Frontend Development": { bg: "bg-pink-500/10", text: "text-pink-400", ring: "ring-pink-500/20", iconBg: "bg-pink-500/20" },
+const subjectThemes: Record<string, { bg: string; text: string; ring: string }> = {
+  "Software Engineering": { bg: "bg-indigo-100", text: "text-indigo-700", ring: "border-indigo-200" },
+  "Cloud Computing": { bg: "bg-cyan-100", text: "text-cyan-700", ring: "border-cyan-200" },
+  "Data Science": { bg: "bg-violet-100", text: "text-violet-700", ring: "border-violet-200" },
+  "System Design": { bg: "bg-amber-100", text: "text-amber-700", ring: "border-amber-200" },
+  "Frontend Development": { bg: "bg-pink-100", text: "text-pink-700", ring: "border-pink-200" },
 };
 
 export default function InterviewPage() {
@@ -183,30 +183,30 @@ export default function InterviewPage() {
 
   const saveInterview = async () => {
     if (!currentInterview.name || !currentInterview.subject || !currentInterview.questions?.length) {
-      return toast.error("Pipeline incomplete. Calibration required.");
+      return toast.error("Please fill in all fields and add at least one question.");
     }
     try {
       const payload = { ...currentInterview, createdBy: userId, questions: currentInterview.questions.map(q => ({ text: q.text, subject: q.subject })) };
       const res = await fetch("/api/interviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (res.ok) {
-        toast.success("Pipeline deployed.");
+        toast.success("Interview created successfully.");
         setCurrentInterview({ name: "", subject: "", timeLimit: 30, questions: [] });
         setIsCreateDialogOpen(false);
         fetchInterviews(userId);
-      } else toast.error("Deployment failed.");
-    } catch { toast.error("Critical deployment error."); }
+      } else toast.error("Failed to create interview.");
+    } catch { toast.error("Something went wrong. Please try again."); }
   };
 
   const deleteInterview = async (id: string) => {
-    if (!confirm("Decommission this pipeline? Data loss is permanent.")) return;
+    if (!confirm("Delete this interview? This action cannot be undone.")) return;
     try {
       const res = await fetch(`/api/interviews/${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Pipeline decommissioned.");
+        toast.success("Interview deleted.");
         setIsViewDialogOpen(false);
         fetchInterviews(userId);
-      } else toast.error("Command failed.");
-    } catch { toast.error("Critical error."); }
+      } else toast.error("Failed to delete interview.");
+    } catch { toast.error("Something went wrong."); }
   };
 
   const copyInterviewLink = async (id: string) => {
@@ -234,14 +234,14 @@ export default function InterviewPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#020202] text-zinc-100 selection:bg-indigo-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-[#f8faf8] text-gray-900 selection:bg-green-200 overflow-x-hidden">
       <Toaster position="bottom-right" />
       
       {/* Immersive Background */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-0 right-[-10%] w-[60%] h-[500px] bg-indigo-600/[0.03] blur-[150px] rounded-full" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[400px] bg-emerald-600/[0.02] blur-[120px] rounded-full" />
-        <div className="absolute inset-x-0 top-0 h-[1000px] bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.02),transparent)]" />
+        <div className="absolute top-0 right-[-10%] w-[60%] h-[500px] bg-green-300/[0.08] blur-[150px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[400px] bg-emerald-300/[0.06] blur-[120px] rounded-full" />
+        <div className="absolute inset-x-0 top-0 h-[1000px] bg-[radial-gradient(ellipse_at_top,rgba(22,163,74,0.03),transparent)]" />
       </div>
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-8 py-10 lg:py-12">
@@ -251,23 +251,23 @@ export default function InterviewPage() {
           <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <motion.div variants={fadeUp} className="space-y-3">
                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-white shadow-xl">
-                     <AudioWaveform className="w-5 h-5 text-indigo-400" />
+                  <div className="w-10 h-10 rounded-2xl bg-green-100 border border-green-300 flex items-center justify-center">
+                     <AudioWaveform className="w-5 h-5 text-green-700" />
                   </div>
-                  <h1 className="text-[34px] font-black tracking-tight text-white leading-none">Evaluations</h1>
+                  <h1 className="text-[30px] font-black tracking-tight text-gray-900 leading-none">Evaluations</h1>
                </div>
-               <p className="text-[15px] text-zinc-500 font-medium max-w-lg leading-relaxed">
-                  Manage high-fidelity AI interview templates and track candidate performance in real-time.
+               <p className="text-[15px] text-gray-500 font-medium max-w-lg leading-relaxed">
+                  Create and manage AI interview sessions for your students, and track their results in real-time.
                </p>
             </motion.div>
 
             <motion.div variants={fadeUp} className="flex flex-wrap items-center gap-4">
                <div className="relative group w-full sm:w-auto">
-                  <Search className="absolute left-3.5 top-3 w-4 h-4 text-zinc-600 group-focus-within:text-indigo-400 transition-colors" />
+                  <Search className="absolute left-3.5 top-3 w-4 h-4 text-gray-400 group-focus-within:text-green-600 transition-colors" />
                   <input 
                     type="text" 
-                    placeholder="Search pipelines..." 
-                    className="h-10 pl-10 pr-4 bg-zinc-900/40 border border-white/5 rounded-xl text-[13px] font-medium focus:ring-1 focus:ring-indigo-500/50 w-full sm:w-[240px] transition-all outline-none"
+                    placeholder="Search interviews..." 
+                    className="h-10 pl-10 pr-4 bg-white border border-green-200 rounded-xl text-[13px] font-medium text-gray-700 placeholder:text-gray-400 focus:ring-1 focus:ring-green-400 focus:border-green-400 w-full sm:w-[240px] transition-all outline-none"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -278,22 +278,22 @@ export default function InterviewPage() {
                     <motion.button 
                       whileHover={{ scale: 1.02, boxShadow: "0 10px 30px -10px rgba(99,102,241,0.4)" }} 
                       whileTap={{ scale: 0.98 }}
-                      className="h-10 px-6 rounded-xl bg-white text-black text-[13px] font-black uppercase tracking-widest transition-all whitespace-nowrap w-full sm:w-auto flex items-center justify-center"
+                      className="h-10 px-6 rounded-xl bg-green-600 text-white text-[13px] font-bold transition-all whitespace-nowrap w-full sm:w-auto flex items-center justify-center hover:bg-green-700 shadow-md shadow-green-200"
                     >
                       <Plus className="w-4 h-4 mr-2 inline-block mb-0.5" />
-                      New Pipeline
+                      Set Up Interview
                     </motion.button>
                   </DialogTrigger>
 
-                  <DialogContent className="max-w-4xl w-[95vw] max-h-[92vh] overflow-y-auto bg-[#080808] border border-white/10 shadow-2xl rounded-[32px] p-0 flex flex-col">
-                    <div className="p-6 sm:p-8 border-b border-white/5 bg-white/[0.01]">
+                  <DialogContent className="max-w-4xl w-[95vw] max-h-[92vh] overflow-y-auto bg-white border border-green-200 shadow-2xl rounded-[32px] p-0 flex flex-col">
+                    <div className="p-6 sm:p-8 border-b border-green-100 bg-green-50">
                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-[20px] bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shrink-0">
+                          <div className="w-12 h-12 rounded-[20px] bg-green-100 flex items-center justify-center text-green-700 border border-green-200 shrink-0">
                              <Activity className="w-6 h-6" />
                           </div>
                           <div>
-                             <DialogTitle className="text-[20px] sm:text-[22px] font-black text-white leading-none mb-1">Deployment Center</DialogTitle>
-                             <p className="text-[13px] sm:text-[14px] text-zinc-500 font-medium">Configure and calibrate your technical agent.</p>
+                             <DialogTitle className="text-[20px] sm:text-[22px] font-black text-gray-900 leading-none mb-1">Create New Interview</DialogTitle>
+                             <p className="text-[13px] sm:text-[14px] text-gray-500 font-medium">Configure your interview session and add questions.</p>
                           </div>
                        </div>
                     </div>
@@ -301,35 +301,35 @@ export default function InterviewPage() {
                     <div className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 overflow-hidden shrink-0">
                        <div className="lg:col-span-5 space-y-8">
                           <div className="space-y-6">
-                            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Protocol Parameters</h3>
+                            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Interview Details</h3>
                             <div className="grid grid-cols-1 gap-6">
                                <div className="space-y-2.5">
-                                  <Label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Template Name</Label>
+                                  <Label className="text-[11px] font-bold text-gray-600 uppercase tracking-widest ml-1">Interview Name</Label>
                                   <Input 
                                     placeholder="e.g. Core Engineering" 
-                                    className="h-12 bg-zinc-900 border-white/5 rounded-2xl focus:border-indigo-500/50 text-[14px] font-medium"
+                                    className="h-12 bg-white border-green-200 rounded-2xl focus:border-green-400 focus:ring-1 focus:ring-green-400 text-[14px] font-medium text-gray-900 placeholder:text-gray-400"
                                     value={currentInterview.name}
                                     onChange={e => setCurrentInterview(p => ({...p, name: e.target.value}))}
                                   />
                                </div>
                                <div className="space-y-2.5">
-                                  <Label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Domain</Label>
+                                  <Label className="text-[11px] font-bold text-gray-600 uppercase tracking-widest ml-1">Subject</Label>
                                   <Select onValueChange={v => setCurrentInterview(p => ({...p, subject: v}))} value={currentInterview.subject}>
-                                    <SelectTrigger className="h-12 bg-zinc-900 border-white/5 rounded-2xl text-[14px] font-medium">
-                                       <SelectValue placeholder="Select domain" />
+                                    <SelectTrigger className="h-12 bg-white border-green-200 rounded-2xl text-[14px] font-medium text-gray-900">
+                                       <SelectValue placeholder="Select subject" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-[#111] border-white/10 rounded-2xl p-1.5">
+                                    <SelectContent className="bg-white border-green-200 rounded-2xl p-1.5 shadow-xl">
                                        {subjects.map(s => (
-                                          <SelectItem key={s} value={s} className="rounded-xl py-3 font-medium cursor-pointer">{s}</SelectItem>
+                                          <SelectItem key={s} value={s} className="rounded-xl py-3 font-medium cursor-pointer text-gray-800">{s}</SelectItem>
                                        ))}
                                     </SelectContent>
                                   </Select>
                                </div>
                                <div className="space-y-2.5">
-                                  <Label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Session Duration (min)</Label>
+                                  <Label className="text-[11px] font-bold text-gray-600 uppercase tracking-widest ml-1">Time Limit (minutes)</Label>
                                   <Input 
                                     type="number" 
-                                    className="h-12 bg-zinc-900 border-white/5 rounded-2xl text-[14px] font-mono"
+                                    className="h-12 bg-white border-green-200 rounded-2xl text-[14px] font-mono text-gray-900 focus:border-green-400 focus:ring-1 focus:ring-green-400"
                                     value={currentInterview.timeLimit}
                                     onChange={e => setCurrentInterview(p => ({...p, timeLimit: parseInt(e.target.value) || 30}))}
                                   />
@@ -337,36 +337,36 @@ export default function InterviewPage() {
                             </div>
                           </div>
 
-                          <div className="p-6 rounded-3xl bg-indigo-500/[0.03] border border-indigo-500/10 space-y-4">
+                          <div className="p-6 rounded-3xl bg-green-50 border border-green-200 space-y-4">
                              <div className="flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-indigo-400" />
-                                <span className="text-[12px] font-black uppercase text-white tracking-wider">AI Accelerator</span>
+                                <Sparkles className="w-4 h-4 text-green-700" />
+                                <span className="text-[12px] font-black uppercase text-green-800 tracking-wider">AI Accelerator</span>
                              </div>
-                             <p className="text-[12px] text-zinc-500 leading-relaxed font-medium">Auto-generate 5 calibrated questions for the selected domain.</p>
+                             <p className="text-[12px] text-gray-600 leading-relaxed font-medium">Auto-generate 5 AI-suggested questions for the selected subject.</p>
                              <Button 
                                 onClick={generateAIQuestions}
                                 disabled={aiLoading || !currentInterview.subject}
-                                className="w-full bg-indigo-500 text-white hover:bg-indigo-400 h-10 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-20"
+                                className="w-full bg-green-600 text-white hover:bg-green-700 h-10 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-30"
                              >
-                                {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Generate"}
+                                {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Generate Questions"}
                              </Button>
                           </div>
                        </div>
 
                        <div className="lg:col-span-7 flex flex-col min-h-[400px]">
                           <div className="flex items-center justify-between mb-4">
-                             <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Calibrated Pool</h3>
-                             <span className="text-[11px] font-black text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/10">
-                               {currentInterview.questions?.length || 0} Calibrated
+                             <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Question List</h3>
+                             <span className="text-[11px] font-black text-green-700 bg-green-100 px-3 py-1 rounded-full border border-green-200">
+                               {currentInterview.questions?.length || 0} Questions
                              </span>
                           </div>
 
-                          <div className="flex-1 bg-black border border-white/5 rounded-[28px] overflow-hidden flex flex-col">
+                          <div className="flex-1 bg-gray-50 border border-green-200 rounded-[28px] overflow-hidden flex flex-col">
                              <div className="flex-1 overflow-y-auto p-4 space-y-2.5 max-h-[350px] sm:max-h-[450px]">
                                 {(!currentInterview.questions || currentInterview.questions.length === 0) ? (
-                                   <div className="h-full flex flex-col items-center justify-center opacity-40 py-20 px-4 text-center">
-                                      <FolderDot className="w-8 h-8 mb-4 text-zinc-700" />
-                                      <p className="text-[13px] font-black uppercase tracking-widest text-zinc-600">Pool Empty</p>
+                                   <div className="h-full flex flex-col items-center justify-center opacity-60 py-20 px-4 text-center">
+                                      <FolderDot className="w-8 h-8 mb-4 text-gray-400" />
+                                      <p className="text-[13px] font-semibold text-gray-400">No questions added yet</p>
                                    </div>
                                 ) : (
                                    <AnimatePresence mode="popLayout">
@@ -377,11 +377,11 @@ export default function InterviewPage() {
                                            initial={{ opacity: 0, y: 10 }}
                                            animate={{ opacity: 1, y: 0 }}
                                            exit={{ opacity: 0, scale: 0.9 }}
-                                           className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex gap-4 group transition-colors hover:border-white/10"
+                                           className="p-4 rounded-2xl bg-white border border-green-200 flex gap-4 group transition-colors hover:border-green-300 shadow-sm"
                                          >
-                                            <span className="text-[10px] font-black text-zinc-600 uppercase mt-1 shrink-0">#{i+1}</span>
-                                            <p className="flex-1 text-[13px] sm:text-[14px] text-zinc-400 leading-relaxed font-medium">{q.text}</p>
-                                            <button onClick={() => removeQuestion(q.id)} className="shrink-0 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
+                                            <span className="text-[10px] font-black text-green-600 uppercase mt-1 shrink-0">#{i+1}</span>
+                                            <p className="flex-1 text-[13px] sm:text-[14px] text-gray-700 leading-relaxed font-medium">{q.text}</p>
+                                            <button onClick={() => removeQuestion(q.id)} className="shrink-0 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                          </motion.div>
@@ -390,11 +390,11 @@ export default function InterviewPage() {
                                 )}
                              </div>
                              
-                             <div className="p-4 bg-zinc-900/40 border-t border-white/5">
+                             <div className="p-4 bg-white border-t border-green-200">
                                 <div className="relative group">
                                    <Textarea 
-                                      placeholder="Manual insertion text..." 
-                                      className="bg-black/80 border-white/5 rounded-2xl min-h-[50px] max-h-[120px] focus:border-indigo-500/30 text-[14px] py-3 pl-4 pr-12 transition-all font-medium"
+                                      placeholder="Type your question here..." 
+                                      className="bg-gray-50 border-green-200 rounded-2xl min-h-[50px] max-h-[120px] focus:border-green-400 focus:ring-1 focus:ring-green-400 text-[14px] py-3 pl-4 pr-12 transition-all font-medium text-gray-800"
                                       value={currentQuestion.text}
                                       onChange={e => setCurrentQuestion({text: e.target.value})}
                                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addQuestion(); }}}
@@ -402,7 +402,7 @@ export default function InterviewPage() {
                                    <button 
                                       onClick={addQuestion} 
                                       disabled={!currentQuestion.text.trim()}
-                                      className="absolute right-2 bottom-2 w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-500 hover:bg-indigo-500 hover:text-white transition-all disabled:opacity-0"
+                                      className="absolute right-2 bottom-2 w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center text-green-600 hover:bg-green-600 hover:text-white transition-all disabled:opacity-30"
                                    >
                                       <Plus className="w-4 h-4" />
                                    </button>
@@ -412,14 +412,14 @@ export default function InterviewPage() {
                        </div>
                     </div>
 
-                    <div className="p-6 sm:p-8 border-t border-white/5 bg-black flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <div className="p-6 sm:p-8 border-t border-green-100 bg-green-50 flex flex-col sm:flex-row items-center justify-between gap-6">
                        <div className="flex items-center gap-3">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-[11px] font-black uppercase text-zinc-600 tracking-[0.2em]">Agent Ready for Deployment</span>
+                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-[11px] font-semibold uppercase text-gray-500 tracking-[0.2em]">Ready to Create</span>
                        </div>
                        <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0">
-                          <Button variant="ghost" onClick={() => setIsCreateDialogOpen(false)} className="h-12 flex-1 sm:flex-none px-8 rounded-2xl text-[12px] font-black uppercase text-zinc-500">Abort</Button>
-                          <Button onClick={saveInterview} className="h-12 flex-1 sm:flex-none px-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-[12px] font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/10">Deploy</Button>
+                          <Button variant="ghost" onClick={() => setIsCreateDialogOpen(false)} className="h-12 flex-1 sm:flex-none px-8 rounded-2xl text-[12px] font-bold uppercase text-gray-500 hover:text-gray-800 hover:bg-gray-100">Cancel</Button>
+                          <Button onClick={saveInterview} className="h-12 flex-1 sm:flex-none px-12 rounded-2xl bg-green-600 hover:bg-green-700 text-white text-[12px] font-black uppercase tracking-[0.2em] shadow-lg shadow-green-200">Create Interview</Button>
                        </div>
                     </div>
                   </DialogContent>
@@ -431,16 +431,16 @@ export default function InterviewPage() {
         {loading ? (
           <div className="py-40 flex flex-col items-center gap-6">
              <div className="w-12 h-12 rounded-full border-2 border-indigo-500/10 border-t-indigo-500 animate-spin" />
-             <p className="text-[14px] text-zinc-600 font-bold uppercase tracking-widest">Hydrating Pipelines</p>
+             <p className="text-[14px] text-zinc-600 font-bold uppercase tracking-widest">Loading Interviews</p>
           </div>
         ) : filteredInterviews.length === 0 ? (
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="py-32 rounded-[40px] border border-dashed border-white/5 bg-white/[0.01] flex flex-col items-center text-center px-6">
-             <div className="w-20 h-20 rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-8">
-                <Globe className="w-10 h-10 text-zinc-700" />
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="py-32 rounded-[40px] border border-dashed border-green-200 bg-green-50/50 flex flex-col items-center text-center px-6">
+             <div className="w-20 h-20 rounded-3xl bg-green-100 border border-green-200 flex items-center justify-center mb-8">
+                <Globe className="w-10 h-10 text-green-400" />
              </div>
-             <h2 className="text-[24px] font-black text-white mb-3">No Active Channels</h2>
-             <p className="text-[15px] text-zinc-500 max-w-sm mb-10 leading-relaxed font-medium">Create your first evaluation pipeline to start conducting AI-automated technical assessments.</p>
-             <Button onClick={() => setIsCreateDialogOpen(true)} className="h-12 px-10 rounded-2xl bg-white text-black font-black uppercase tracking-widest">Initialize Sequence</Button>
+             <h2 className="text-[24px] font-black text-gray-900 mb-3">No Interviews Yet</h2>
+             <p className="text-[15px] text-gray-500 max-w-sm mb-10 leading-relaxed font-medium">Create your first interview session to start evaluating your students with AI.</p>
+             <Button onClick={() => setIsCreateDialogOpen(true)} className="h-12 px-10 rounded-2xl bg-green-600 text-white font-bold hover:bg-green-700">Set Up Interview</Button>
           </motion.div>
         ) : (
           <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -450,48 +450,46 @@ export default function InterviewPage() {
                   <motion.div 
                     key={item.id} 
                     variants={fadeUp} 
-                    className="group relative flex flex-col bg-zinc-900/30 border border-white/[0.06] rounded-[32px] p-6 transition-all duration-500 hover:bg-zinc-900/60 hover:border-white/10 hover:shadow-2xl hover:shadow-black h-full"
+                    className="group relative flex flex-col bg-white border border-green-200 rounded-[28px] p-6 transition-all duration-300 hover:border-green-400 hover:shadow-lg hover:shadow-green-100 h-full"
                   >
-                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-[32px]" />
-                     
-                     <div className="relative z-10 flex flex-col gap-6 h-full">
+                     <div className="relative z-10 flex flex-col gap-5 h-full">
                         <div className="flex items-center justify-between">
-                           <div className={`px-4 py-1.5 rounded-xl border ${theme.ring} ${theme.bg} ${theme.text} text-[10px] font-black uppercase tracking-widest`}>
+                           <div className={`px-3 py-1.5 rounded-xl border ${theme.ring} ${theme.bg} ${theme.text} text-[10px] font-bold uppercase tracking-widest`}>
                               {item.subject}
                            </div>
-                           <span className="text-[11px] font-mono text-zinc-600 font-bold">{item.timeLimit}m limit</span>
+                           <span className="text-[11px] font-mono text-gray-400 font-semibold">{item.timeLimit}m limit</span>
                         </div>
 
                         <div>
-                           <h3 onClick={() => prepareView(item)} className="text-[18px] font-black text-white leading-tight mb-2 cursor-pointer group-hover:text-indigo-400 transition-colors uppercase tracking-tight break-words">
+                           <h3 onClick={() => prepareView(item)} className="text-[18px] font-black text-gray-900 leading-tight mb-2 cursor-pointer hover:text-green-700 transition-colors tracking-tight break-words">
                               {item.name}
                            </h3>
-                           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-zinc-500 text-[12px] font-bold">
+                           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-500 text-[12px] font-semibold">
                               <span className="flex items-center gap-1.5">
-                                 <Plus className="w-3.5 h-3.5 text-zinc-700 group-hover:text-amber-500 transition-colors" /> {item.questionCount} Q
+                                 <Plus className="w-3.5 h-3.5 text-gray-400" /> {item.questionCount} Q
                               </span>
-                              <div className="hidden sm:block w-1 h-1 rounded-full bg-zinc-800" />
-                              <span className="flex items-center gap-1.5 text-indigo-400/80">
+                              <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300" />
+                              <span className="flex items-center gap-1.5 text-green-600">
                                  <Users className="w-3.5 h-3.5" /> {item.candidatesCount} Applied
                               </span>
                            </div>
                         </div>
 
-                        <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
+                        <div className="mt-auto pt-5 border-t border-green-100 flex items-center justify-between">
                            <div className="flex items-center gap-2 group/link cursor-pointer" onClick={() => copyInterviewLink(item.id)}>
-                              <div className={`w-9 h-9 rounded-xl ${copiedId === item.id ? 'bg-emerald-500/10' : 'bg-white/5'} flex items-center justify-center transition-all group-hover/link:bg-indigo-500/10 border border-transparent group-hover/link:border-indigo-500/20`}>
-                                 {copiedId === item.id ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Link2 className="w-4 h-4 text-zinc-600 group-hover/link:text-indigo-400" />}
+                              <div className={`w-9 h-9 rounded-xl ${copiedId === item.id ? 'bg-green-100 border-green-300' : 'bg-gray-100 border-gray-200'} flex items-center justify-center transition-all border hover:bg-green-100 hover:border-green-300`}>
+                                 {copiedId === item.id ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <Link2 className="w-4 h-4 text-gray-500 group-hover/link:text-green-600" />}
                               </div>
-                              <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${copiedId === item.id ? 'text-emerald-400' : 'text-zinc-600 group-hover/link:text-indigo-400'} transition-all hidden sm:block`}>
-                                 {copiedId === item.id ? 'Ready' : 'Share'}
+                              <span className={`text-[11px] font-bold uppercase tracking-[0.2em] ${copiedId === item.id ? 'text-green-600' : 'text-gray-400 group-hover/link:text-green-600'} transition-all hidden sm:block`}>
+                                 {copiedId === item.id ? 'Copied!' : 'Share'}
                               </span>
                            </div>
                            
                            <div className="flex items-center gap-2">
-                              <button onClick={() => prepareView(item)} className="p-2.5 rounded-xl bg-white/5 text-zinc-600 hover:bg-white/10 hover:text-white transition-all border border-transparent hover:border-white/5">
+                              <button onClick={() => prepareView(item)} className="p-2.5 rounded-xl bg-gray-100 text-gray-500 hover:bg-green-100 hover:text-green-700 transition-all border border-gray-200 hover:border-green-300">
                                  <Eye className="w-5 h-5" />
                               </button>
-                              <button onClick={() => router.push(`/interview/${item.id}/results`)} className="p-2.5 rounded-xl bg-white/5 text-zinc-600 hover:bg-white/10 hover:text-white transition-all border border-transparent hover:border-white/5">
+                              <button onClick={() => router.push(`/interview/${item.id}/results`)} className="p-2.5 rounded-xl bg-gray-100 text-gray-500 hover:bg-green-100 hover:text-green-700 transition-all border border-gray-200 hover:border-green-300">
                                  <BarChart3 className="w-5 h-5" />
                               </button>
                            </div>
@@ -507,7 +505,7 @@ export default function InterviewPage() {
       <AnimatePresence>
          {isViewDialogOpen && (
            <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-             <DialogContent className="max-w-[550px] w-[95vw] bg-[#080808] border border-white/10 rounded-[40px] p-0 shadow-2xl overflow-hidden selection:bg-indigo-500/20">
+             <DialogContent className="max-w-[550px] w-[95vw] bg-white border border-green-200 rounded-[40px] p-0 shadow-2xl overflow-hidden">
                {selectedQuestionsView(selectedInterview, deleteInterview, copyInterviewLink, router, copiedId)}
              </DialogContent>
            </Dialog>
@@ -524,59 +522,63 @@ function selectedQuestionsView(selectedInterview: Interview | null, deleteInterv
    return (
       <div className="flex flex-col h-full max-h-[90vh]">
          {/* Top Header */}
-         <div className="p-6 sm:p-10 pb-6 border-b border-white/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 blur-[80px] opacity-60 rounded-full" />
+         <div className="p-6 sm:p-10 pb-6 border-b border-green-100 bg-green-50 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-green-200/30 blur-[80px] opacity-60 rounded-full" />
             <div className="relative z-10">
                <div className="flex items-center justify-between mb-6">
-                  <div className={`px-4 py-1.5 rounded-xl border ${theme.ring} ${theme.bg} ${theme.text} text-[10px] font-black uppercase tracking-widest`}>
+                  <div className={`px-4 py-1.5 rounded-xl border ${theme.ring} ${theme.bg} ${theme.text} text-[10px] font-bold uppercase tracking-widest`}>
                      {selectedInterview.subject}
                   </div>
-                  <button onClick={() => deleteInterview(selectedInterview.id)} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-red-500/5 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20">
+                  <button onClick={() => deleteInterview(selectedInterview.id)} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-red-50 text-gray-400 hover:text-red-600 hover:bg-red-100 transition-all border border-red-100">
                      <Trash2 className="w-5 h-5" />
                   </button>
                </div>
-               <h2 className="text-[24px] sm:text-[32px] font-black text-white tracking-tight leading-[1.1] mb-4 uppercase break-words">{selectedInterview.name}</h2>
-               <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-[12px] font-bold text-zinc-500">
-                  <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-indigo-400/50" /> {selectedInterview.timeLimit}m limit</span>
-                  <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-zinc-800" />
-                  <span className="flex items-center gap-1.5"><Users className="w-4 h-4 text-emerald-400/50" /> {selectedInterview.candidatesCount} applied</span>
+               <h2 className="text-[24px] sm:text-[30px] font-black text-gray-900 tracking-tight leading-[1.1] mb-4 break-words">{selectedInterview.name}</h2>
+               <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-[12px] font-semibold text-gray-500">
+                  <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-green-500" /> {selectedInterview.timeLimit}m limit</span>
+                  <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-gray-300" />
+                  <span className="flex items-center gap-1.5"><Users className="w-4 h-4 text-green-500" /> {selectedInterview.candidatesCount} applied</span>
                </div>
             </div>
          </div>
 
          {/* Content Area */}
-         <div className="p-6 sm:p-10 pb-4 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/5 space-y-8">
+         <div className="p-6 sm:p-10 pb-4 flex-1 overflow-y-auto space-y-8">
             <div className="space-y-4">
-               <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Expert Question Pool</h3>
-               <div className="space-y-4">
+               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Interview Questions</h3>
+               <div className="space-y-3">
                   {selectedInterview.questions?.map((q, i) => (
-                     <div key={q.id || i} className="p-5 sm:p-6 rounded-[28px] bg-white/[0.02] border border-white/5 transition-all hover:bg-white/[0.04] hover:border-white/10">
+                     <div key={q.id || i} className="p-5 sm:p-6 rounded-[20px] bg-gray-50 border border-green-100 hover:border-green-200 transition-all">
                         <div className="flex items-start gap-4">
-                           <span className="text-[11px] font-black text-indigo-400 uppercase mt-1 shrink-0">#{i+1}</span>
-                           <p className="text-[14px] sm:text-[15px] font-medium text-zinc-300 leading-relaxed">{q.text}</p>
+                           <span className="text-[11px] font-black text-green-600 uppercase mt-1 shrink-0">#{i+1}</span>
+                           <p className="text-[14px] sm:text-[15px] font-medium text-gray-800 leading-relaxed">{q.text}</p>
                         </div>
                      </div>
                   ))}
                   {!selectedInterview.questions?.length && (
-                    <div className="py-20 text-center border border-dashed border-white/5 rounded-[32px]">
-                       <FolderDot className="w-10 h-10 mx-auto mb-4 text-zinc-800" />
-                       <p className="text-[12px] font-black uppercase tracking-widest text-zinc-600">No calibration found</p>
+                    <div className="py-16 text-center border border-dashed border-green-200 rounded-[24px] bg-green-50/50">
+                       <FolderDot className="w-10 h-10 mx-auto mb-4 text-green-300" />
+                       <p className="text-[13px] font-semibold text-gray-400">No questions added</p>
                     </div>
                   )}
                </div>
             </div>
          </div>
 
-         {/* Grounded Action Bar */}
-         <div className="p-6 sm:p-10 pt-4 flex flex-col gap-4">
+         {/* Action Bar */}
+         <div className="p-6 sm:p-10 pt-4 flex flex-col gap-4 border-t border-green-100 bg-white">
             <Button 
                onClick={() => copyInterviewLink(selectedInterview.id)} 
-               className={`h-12 w-full rounded-2xl text-[12px] font-black uppercase tracking-widest transition-all ${copiedId === selectedInterview.id ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+               className={`h-12 w-full rounded-2xl text-[12px] font-bold uppercase tracking-widest transition-all ${
+                 copiedId === selectedInterview.id 
+                   ? 'bg-green-100 text-green-700 border-green-300 border' 
+                   : 'bg-gray-100 border border-gray-200 text-gray-700 hover:bg-green-100 hover:text-green-700 hover:border-green-300'
+               }`}
             >
-               {copiedId === selectedInterview.id ? <><CheckCircle2 className="w-4 h-4 mr-2" /> Protocol Hub Linked</> : <><Copy className="w-4 h-4 mr-2" /> Share Protocol Hub</>}
+               {copiedId === selectedInterview.id ? <><CheckCircle2 className="w-4 h-4 mr-2" /> Link Copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy Student Link</>}
             </Button>
-            <Button onClick={() => router.push(`/interview/${selectedInterview.id}/results`)} className="h-14 w-full rounded-[24px] bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-indigo-600/10 transition-all hover:scale-[1.01]">
-               View Performance Hub
+            <Button onClick={() => router.push(`/interview/${selectedInterview.id}/results`)} className="h-14 w-full rounded-[24px] bg-green-600 hover:bg-green-700 text-white text-[13px] font-black uppercase tracking-[0.2em] shadow-lg shadow-green-200 transition-all">
+               View Results
             </Button>
          </div>
       </div>

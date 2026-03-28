@@ -11,7 +11,7 @@ import dynamic from "next/dynamic";
 import {
   Clock, Mic, MicOff, CheckCircle2, AlertCircle, Play,
   Loader2, Sparkles, AudioWaveform, ChevronRight, User,
-  Mail, Shield, BookOpen, Zap, Radio
+  Mail, Shield, BookOpen, Zap, Radio, GraduationCap
 } from "lucide-react";
 
 const ReactMediaRecorder = dynamic(
@@ -99,6 +99,8 @@ export default function IntervieweePage() {
   const [questionsAsked, setQuestionsAsked] = useState<string[]>([]);
   const [recordedAudioDuration, setRecordedAudioDuration] = useState<number>(0);
   const [isStarting, setIsStarting] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [isRetryAttempt, setIsRetryAttempt] = useState<boolean>(false);
 
   const recorderRef = useRef<any>({});
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -227,6 +229,8 @@ export default function IntervieweePage() {
                   questionText: currentQuestion,
                   questionCount,
                   questionsAsked,
+                  currentQuestionIndex,
+                  isRetryAttempt,
                 }),
               }
             );
@@ -247,7 +251,9 @@ export default function IntervieweePage() {
               } else if (result.data.nextQuestion) {
                 setCurrentQuestion(result.data.nextQuestion);
                 setQuestionCount((prev) => prev + 1);
-                setQuestionsAsked((prev) => [...prev, result.data.nextQuestion]);
+                setQuestionsAsked(result.data.questionsAsked || ((prev: string[]) => [...prev, result.data.nextQuestion]));
+                setCurrentQuestionIndex(result.data.currentQuestionIndex ?? 0);
+                setIsRetryAttempt(result.data.isRetryAttempt ?? false);
               }
             } else toast.error(result.message || "Failed to process answer");
           } catch {
@@ -306,14 +312,14 @@ export default function IntervieweePage() {
   // ─── LOADING STATE ───────────────────────────────────────────────────────────
   if (isLoadingInterview) {
     return (
-      <div className="min-h-screen bg-[#020202] flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-[#f8faf8] flex flex-col items-center justify-center">
         <div className="flex flex-col items-center gap-5">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            className="w-14 h-14 rounded-full border-2 border-indigo-500/20 border-t-indigo-500"
+            className="w-14 h-14 rounded-full border-2 border-green-500/20 border-t-green-500"
           />
-          <p className="text-zinc-400 text-[14px] font-medium">Initializing interview environment…</p>
+          <p className="text-gray-500 text-[14px] font-medium">Initializing interview environment…</p>
         </div>
       </div>
     );
@@ -340,16 +346,16 @@ export default function IntervieweePage() {
   // ─── REGISTRATION FORM ───────────────────────────────────────────────────────
   if (showNameForm) {
     return (
-      <div className="min-h-screen bg-[#020202] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#f8faf8] flex items-center justify-center px-4">
         {/* Background glows */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-indigo-600/[0.07] blur-[120px] rounded-full" />
-          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-600/[0.05] blur-[100px] rounded-full" />
+          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-green-300/[0.1] blur-[120px] rounded-full" />
+          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-emerald-300/[0.08] blur-[100px] rounded-full" />
         </div>
         {/* Grid */}
-        <div className="fixed inset-0 pointer-events-none opacity-[0.02]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+        <div className="fixed inset-0 pointer-events-none opacity-[0.02]" style={{ backgroundImage: "linear-gradient(rgba(22,163,74,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(22,163,74,0.5) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
 
-        <Toaster position="top-right" toastOptions={{ style: { background: "#111", color: "#fff", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" } }} />
+        <Toaster position="top-right" toastOptions={{ style: { background: "#fff", color: "#111", border: "1px solid #e5e7eb", borderRadius: "12px" } }} />
 
         <motion.div
           initial="hidden"
@@ -359,31 +365,31 @@ export default function IntervieweePage() {
         >
           {/* Logo */}
           <motion.div variants={fadeUp} className="flex items-center justify-center gap-2.5 mb-8">
-            <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)]">
-              <AudioWaveform className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-[0_0_20px_rgba(22,163,74,0.35)]">
+              <GraduationCap className="w-5 h-5 text-white" />
             </div>
-            <span className="text-[18px] font-bold text-white">Echo<span className="text-indigo-400">Grade</span></span>
+            <span className="text-[18px] font-bold text-gray-900">KIIT<span className="text-green-600">Aspire</span></span>
           </motion.div>
 
           {/* Card */}
-          <motion.div variants={fadeUp} className="rounded-[24px] border border-white/[0.07] bg-white/[0.02] backdrop-blur-xl overflow-hidden">
+          <motion.div variants={fadeUp} className="rounded-[24px] border border-green-200 bg-white backdrop-blur-xl overflow-hidden shadow-lg">
             {/* Header */}
-            <div className="px-8 pt-8 pb-6 border-b border-white/[0.06]">
+            <div className="px-8 pt-8 pb-6 border-b border-green-100 bg-green-50/40">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full">
+                <span className="text-[11px] font-bold text-green-700 uppercase tracking-widest bg-green-100 border border-green-200 px-2.5 py-1 rounded-full">
                   {interviewDetails.subject}
                 </span>
               </div>
-              <h1 className="text-[22px] font-bold text-white tracking-tight mb-1">{interviewDetails.name}</h1>
-              <div className="flex items-center gap-4 text-[13px] text-zinc-500">
+              <h1 className="text-[22px] font-bold text-gray-900 tracking-tight mb-1">{interviewDetails.name}</h1>
+              <div className="flex items-center gap-4 text-[13px] text-gray-500">
                 <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{interviewDetails.timeLimit} min</span>
                 <span className="flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5" />{interviewDetails.questionCount} questions</span>
               </div>
             </div>
 
             {/* Guidelines */}
-            <div className="px-8 py-5 border-b border-white/[0.06]">
-              <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Session Guidelines</p>
+            <div className="px-8 py-5 border-b border-green-100 bg-white">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Session Guidelines</p>
               <div className="space-y-2.5">
                 {[
                   { icon: Mic, text: "Hold Spacebar to record your verbal answer" },
@@ -391,19 +397,19 @@ export default function IntervieweePage() {
                   { icon: Shield, text: "Don't refresh — your progress won't be saved" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-[6px] bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <item.icon className="w-3 h-3 text-indigo-400" />
+                    <div className="w-6 h-6 rounded-[6px] bg-green-100 border border-green-200 flex items-center justify-center shrink-0 mt-0.5">
+                      <item.icon className="w-3 h-3 text-green-600" />
                     </div>
-                    <p className="text-[13px] text-zinc-400 leading-relaxed">{item.text}</p>
+                    <p className="text-[13px] text-gray-600 leading-relaxed">{item.text}</p>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Form */}
-            <div className="px-8 py-6 space-y-4">
+            <div className="px-8 py-6 space-y-4 bg-white">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-[12px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Label htmlFor="name" className="text-[12px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5" /> Full Name
                 </Label>
                 <Input
@@ -413,11 +419,11 @@ export default function IntervieweePage() {
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && startInterview()}
-                  className="bg-black/60 border-white/[0.08] focus-visible:ring-1 focus-visible:ring-indigo-500/50 h-11 rounded-[10px] text-[14px] text-white placeholder:text-zinc-600"
+                  className="border-gray-200 focus-visible:ring-1 focus-visible:ring-green-500 h-11 rounded-[10px] text-[14px] text-gray-900 placeholder:text-gray-400"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-[12px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Label htmlFor="email" className="text-[12px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5" /> Email Address
                 </Label>
                 <Input
@@ -427,16 +433,16 @@ export default function IntervieweePage() {
                   value={studentEmail}
                   onChange={(e) => setStudentEmail(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && startInterview()}
-                  className="bg-black/60 border-white/[0.08] focus-visible:ring-1 focus-visible:ring-indigo-500/50 h-11 rounded-[10px] text-[14px] text-white placeholder:text-zinc-600"
+                  className="border-gray-200 focus-visible:ring-1 focus-visible:ring-green-500 h-11 rounded-[10px] text-[14px] text-gray-900 placeholder:text-gray-400"
                 />
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(99,102,241,0.4)" }}
+                whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(22,163,74,0.2)" }}
                 whileTap={{ scale: 0.98 }}
                 onClick={startInterview}
                 disabled={!studentName.trim() || !studentEmail.trim() || isStarting}
-                className="w-full h-12 mt-2 rounded-[12px] bg-gradient-to-r from-indigo-500 to-violet-600 text-[14px] font-bold text-white flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(99,102,241,0.35)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                className="w-full h-12 mt-2 rounded-[12px] bg-gradient-to-r from-green-500 to-emerald-600 text-[14px] font-bold text-white flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(22,163,74,0.3)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 {isStarting ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Starting interview…</>
@@ -454,11 +460,11 @@ export default function IntervieweePage() {
   // ─── COMPLETION STATE ────────────────────────────────────────────────────────
   if (interviewComplete) {
     return (
-      <div className="min-h-screen bg-[#020202] flex flex-col items-center justify-center px-4">
+      <div className="min-h-screen bg-[#f8faf8] flex flex-col items-center justify-center px-4">
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-emerald-600/[0.05] blur-[120px] rounded-full" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-green-300/[0.05] blur-[120px] rounded-full" />
         </div>
-        <Toaster position="top-right" toastOptions={{ style: { background: "#111", color: "#fff", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" } }} />
+        <Toaster position="top-right" toastOptions={{ style: { background: "#fff", color: "#111", border: "1px solid #e5e7eb", borderRadius: "12px" } }} />
 
         <motion.div
           initial="hidden"
@@ -470,16 +476,16 @@ export default function IntervieweePage() {
           <motion.div variants={fadeUp} className="flex justify-center mb-8">
             <div className="relative">
               <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full scale-150" />
-              <div className="relative w-20 h-20 rounded-[20px] bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.4)]">
+              <div className="relative w-20 h-20 rounded-[20px] bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-[0_0_40px_rgba(22,163,74,0.3)]">
                 <CheckCircle2 className="w-10 h-10 text-white" />
               </div>
             </div>
           </motion.div>
 
-          <motion.h1 variants={fadeUp} className="text-[2.5rem] font-bold text-white tracking-tight mb-2">
+          <motion.h1 variants={fadeUp} className="text-[2.5rem] font-bold text-gray-900 tracking-tight mb-2">
             Evaluation Complete
           </motion.h1>
-          <motion.p variants={fadeUp} className="text-zinc-500 text-[15px] mb-10">
+          <motion.p variants={fadeUp} className="text-gray-500 text-[15px] mb-10">
             Your responses have been securely recorded and analyzed.
           </motion.p>
 
@@ -492,17 +498,17 @@ export default function IntervieweePage() {
           {evaluation && (
             <motion.div
               variants={fadeUp}
-              className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-6 text-left mb-6"
+              className="rounded-[18px] border border-green-100 bg-white p-6 text-left mb-6 shadow-sm"
             >
               <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4 text-indigo-400" />
-                <h3 className="text-[13px] font-bold text-indigo-400 uppercase tracking-wider">AI Evaluation</h3>
+                <Sparkles className="w-4 h-4 text-green-600" />
+                <h3 className="text-[13px] font-bold text-green-600 uppercase tracking-wider">AI Evaluation</h3>
               </div>
-              <p className="text-zinc-300 text-[14px] leading-relaxed whitespace-pre-wrap">{evaluation}</p>
+              <p className="text-gray-600 text-[14px] leading-relaxed whitespace-pre-wrap">{evaluation}</p>
             </motion.div>
           )}
 
-          <motion.p variants={fadeUp} className="text-zinc-600 text-[13px]">
+          <motion.p variants={fadeUp} className="text-gray-400 text-[13px]">
             You may safely close this window. Results have been sent to the hiring team.
           </motion.p>
         </motion.div>
@@ -512,30 +518,30 @@ export default function IntervieweePage() {
 
   // ─── ACTIVE INTERVIEW ────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#020202] flex flex-col">
+    <div className="min-h-screen bg-[#f8faf8] flex flex-col">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-20%] left-[20%] w-[500px] h-[500px] bg-indigo-600/[0.05] blur-[120px] rounded-full" />
-        <div className="absolute bottom-0 right-[10%] w-[400px] h-[400px] bg-violet-600/[0.04] blur-[100px] rounded-full" />
+        <div className="absolute top-[-20%] left-[20%] w-[500px] h-[500px] bg-green-300/[0.08] blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 right-[10%] w-[400px] h-[400px] bg-emerald-300/[0.06] blur-[100px] rounded-full" />
       </div>
-      <div className="fixed inset-0 pointer-events-none opacity-[0.015] z-0" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+      <div className="fixed inset-0 pointer-events-none opacity-[0.015] z-0" style={{ backgroundImage: "linear-gradient(rgba(22,163,74,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(22,163,74,0.5) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
 
-      <Toaster position="top-right" toastOptions={{ style: { background: "#111", color: "#fff", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" } }} />
+      <Toaster position="top-right" toastOptions={{ style: { background: "#fff", color: "#111", border: "1px solid #e5e7eb", borderRadius: "12px" } }} />
 
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 border-b border-white/[0.06] bg-black/30 backdrop-blur-xl"
+        className="relative z-10 border-b border-green-200 bg-white backdrop-blur-xl"
       >
         <div className="max-w-6xl mx-auto flex items-center justify-between h-[60px] px-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-[8px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.3)]">
-              <AudioWaveform className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-[8px] bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-[0_0_15px_rgba(22,163,74,0.3)]">
+              <GraduationCap className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-[14px] font-bold text-white leading-tight">{interviewName}</p>
-              <p className="text-[11px] text-zinc-500">{studentName}</p>
+              <p className="text-[14px] font-bold text-gray-900 leading-tight">{interviewName}</p>
+              <p className="text-[11px] text-gray-400">{studentName}</p>
             </div>
           </div>
 
@@ -545,8 +551,8 @@ export default function IntervieweePage() {
             transition={{ repeat: Infinity, duration: 1 }}
             className={`flex items-center gap-2.5 px-4 py-2 rounded-[10px] font-mono text-[15px] font-bold border transition-all ${
               isTimeCritical
-                ? "bg-red-500/10 text-red-400 border-red-500/20"
-                : "bg-white/[0.03] text-indigo-300 border-white/[0.07]"
+                ? "bg-red-50 text-red-600 border-red-200"
+                : "bg-white text-green-700 border-green-200"
             }`}
           >
             <Clock className="w-4 h-4" />
@@ -554,8 +560,8 @@ export default function IntervieweePage() {
           </motion.div>
 
           {/* Progress */}
-          <div className="flex items-center gap-2 text-[13px] text-zinc-500">
-            <span className="text-white font-semibold">{questionCount}</span>
+          <div className="flex items-center gap-2 text-[13px] text-gray-400">
+            <span className="text-gray-900 font-semibold">{questionCount}</span>
             <span>/</span>
             <span>{interviewDetails?.questionCount}</span>
             <span className="ml-1 text-zinc-600">questions</span>
@@ -563,9 +569,9 @@ export default function IntervieweePage() {
         </div>
 
         {/* Progress bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/[0.03]">
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-green-100">
           <motion.div
-            className="h-full bg-gradient-to-r from-indigo-500 to-violet-500"
+            className="h-full bg-gradient-to-r from-green-500 to-emerald-500"
             initial={{ width: 0 }}
             animate={{ width: `${(questionCount / (interviewDetails?.questionCount || 1)) * 100}%` }}
             transition={{ duration: 0.5 }}
@@ -584,12 +590,12 @@ export default function IntervieweePage() {
             transition={{ duration: 0.5 }}
             className="lg:col-span-3"
           >
-            <div className="h-full rounded-[20px] border border-white/[0.07] bg-white/[0.02] p-8 lg:p-12 flex flex-col justify-center relative overflow-hidden">
+            <div className="h-full rounded-[20px] border border-green-200 bg-white p-8 lg:p-12 flex flex-col justify-center relative overflow-hidden">
               {/* Top accent line */}
-              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-indigo-500 via-violet-500 to-transparent" />
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-green-500 via-emerald-500 to-transparent" />
 
               <div className="mb-5">
-                <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full">
+                <span className="text-[11px] font-bold text-green-700 uppercase tracking-widest bg-green-100 border border-green-200 px-3 py-1.5 rounded-full">
                   Question {questionCount} of {interviewDetails?.questionCount}
                 </span>
               </div>
@@ -601,13 +607,13 @@ export default function IntervieweePage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.4 }}
-                  className="text-[1.5rem] sm:text-[2rem] font-bold text-white leading-tight tracking-tight"
+                  className="text-[1.5rem] sm:text-[2rem] font-bold text-gray-900 leading-tight tracking-tight"
                 >
                   "{currentQuestion}"
                 </motion.h2>
               </AnimatePresence>
 
-              <p className="mt-6 text-zinc-600 text-[13px]">
+              <p className="mt-6 text-gray-400 text-[13px]">
                 Record your verbal answer using the microphone panel →
               </p>
             </div>
@@ -620,7 +626,7 @@ export default function IntervieweePage() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="lg:col-span-2"
           >
-            <div className="h-full rounded-[20px] border border-white/[0.07] bg-white/[0.02] p-6 flex flex-col items-center justify-center">
+            <div className="h-full rounded-[20px] border border-green-200 bg-white p-6 flex flex-col items-center justify-center">
               <ReactMediaRecorder
                 audio
                 onStop={(blobUrl) => {
@@ -653,31 +659,31 @@ export default function IntervieweePage() {
                           transition={{ repeat: Infinity, duration: 0.8 }}
                           className={`relative w-28 h-28 rounded-full flex flex-col items-center justify-center border-2 transition-all duration-300 ${
                             status === "recording"
-                              ? "bg-red-500/15 border-red-500/50 shadow-[0_0_40px_rgba(239,68,68,0.3)]"
-                              : "bg-white/[0.03] border-white/[0.08]"
+                              ? "bg-red-50 border-red-200 shadow-[0_0_40px_rgba(239,68,68,0.1)]"
+                              : "bg-green-50 border-green-100"
                           }`}
                         >
                           {status === "recording" ? (
                             <>
-                              <Radio className="w-8 h-8 text-red-400" />
-                              <span className="text-red-400 font-mono text-[12px] font-bold mt-1">{recordingDuration}s</span>
+                              <Radio className="w-8 h-8 text-red-500" />
+                              <span className="text-red-500 font-mono text-[12px] font-bold mt-1">{recordingDuration}s</span>
                             </>
                           ) : isProcessing ? (
-                            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                            <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
                           ) : (
-                            <MicOff className="w-8 h-8 text-zinc-500" />
+                            <MicOff className="w-8 h-8 text-green-400" />
                           )}
                         </motion.div>
                       </div>
 
                       {/* Status text */}
                       <div className="text-center">
-                        <p className="text-[15px] font-semibold text-white mb-1">
+                        <p className="text-[15px] font-semibold text-gray-900 mb-1">
                           {status === "recording" ? "Recording…" : isProcessing ? "Analyzing…" : "Ready to record"}
                         </p>
                         {!mediaBlobUrl && !isProcessing && (
-                          <p className="text-[12px] text-zinc-600">
-                            Hold <kbd className="px-1.5 py-0.5 bg-white/[0.05] border border-white/10 rounded-[4px] font-mono text-zinc-400 text-[11px]">Space</kbd> to record
+                          <p className="text-[12px] text-gray-400">
+                            Hold <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded-[4px] font-mono text-gray-600 text-[11px]">Space</kbd> to record
                           </p>
                         )}
                       </div>
@@ -693,8 +699,8 @@ export default function IntervieweePage() {
                             disabled={isProcessing}
                             className={`flex-1 h-12 rounded-[12px] font-semibold text-[13px] flex items-center justify-center gap-2 transition-all border ${
                               status === "recording"
-                                ? "bg-red-500/15 border-red-500/30 text-red-400"
-                                : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/15"
+                                ? "bg-red-50 border-red-200 text-red-600"
+                                : "bg-green-600 border-green-600 text-white hover:bg-green-700"
                             } disabled:opacity-40`}
                           >
                             {status === "recording" ? <><Radio className="w-4 h-4" /> Release to stop</> : <><Mic className="w-4 h-4" /> Hold to record</>}
@@ -709,7 +715,7 @@ export default function IntervieweePage() {
                           animate={{ opacity: 1, y: 0 }}
                           className="w-full space-y-3"
                         >
-                          <div className="flex items-center justify-between text-[12px] text-zinc-500 px-1">
+                          <div className="flex items-center justify-between text-[12px] text-gray-400 px-1">
                             <span>Recording ready</span>
                             <span className="font-mono">{recordedAudioDuration}s</span>
                           </div>
@@ -718,7 +724,7 @@ export default function IntervieweePage() {
                             <button
                               disabled={isProcessing}
                               onClick={() => { if (clearBlobUrl) clearBlobUrl(); setRecordedAudioDuration(0); }}
-                              className="flex-1 h-10 rounded-[10px] border border-white/[0.08] bg-white/[0.02] text-[13px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-all"
+                              className="flex-1 h-10 rounded-[10px] border border-green-200 bg-white text-[13px] font-medium text-gray-500 hover:text-gray-900 hover:bg-green-50 transition-all"
                             >
                               Discard
                             </button>
@@ -727,7 +733,7 @@ export default function IntervieweePage() {
                               whileTap={{ scale: 0.97 }}
                               disabled={isProcessing}
                               onClick={handleSubmitAnswer}
-                              className="flex-1 h-10 rounded-[10px] bg-gradient-to-r from-indigo-500 to-violet-600 text-[13px] font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                              className="flex-1 h-10 rounded-[10px] bg-gradient-to-r from-green-500 to-emerald-600 text-[13px] font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
                             >
                               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit <ChevronRight className="w-4 h-4" /></>}
                             </motion.button>

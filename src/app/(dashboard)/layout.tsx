@@ -2,8 +2,8 @@ import Sidebar from "@/components/sidebar";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "EchoGrade | Dashboard",
-  description: "EchoGrade – AI Interview Intelligence Platform",
+  title: "KIITAspire | Faculty Dashboard",
+  description: "KIITAspire – AI Oral Interview Platform for KIIT University",
 };
 
 export default function DashboardLayout({
@@ -12,10 +12,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex bg-[#020202] text-foreground min-h-screen">
+    <div className="flex bg-[#f8faf8] text-foreground min-h-screen">
       <Sidebar />
       {/* Main content - offset for sidebar (220px expanded, 64px collapsed) */}
-      <div className="flex-1 ml-[220px] min-h-screen bg-[#020202] transition-all duration-300">
+      <div className="flex-1 ml-[220px] min-h-screen bg-[#f8faf8] transition-all duration-300">
         {children}
       </div>
     </div>

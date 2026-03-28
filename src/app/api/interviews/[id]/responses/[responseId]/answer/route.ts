@@ -41,54 +41,76 @@ function extractScore(evaluationText: string): number {
   return 0;
 }
 
-// Process audio with AI
+/*
+  Interview Flow Logic:
+  - Faculty creates N questions (e.g. 3).
+  - The interview works through each question in order.
+  - For each question, the student gets ONE attempt.
+  - If the answer is wrong/incomplete, the AI asks ONE follow-up (guided retry).
+  - If the follow-up answer is also wrong, the AI moves to the NEXT teacher-added question.
+  - The interview ends only after ALL teacher-added questions have been covered.
+
+  State tracked per answer submission:
+    - currentQuestionIndex: which teacher question we are on (0-based)
+    - isRetryAttempt: whether this answer is a follow-up for the same question
+    - questionsAsked: full history of questions shown to the student
+    - availableQuestions: the teacher-added questions
+*/
+
 async function processAudioWithAI(
   audioBase64: string,
   mimeType: string,
-  currentQuestionCount: number,
-  currentQuestionsAsked: string[],
-  availableQuestions: string[]
+  currentQuestionIndex: number,   // 0-based index of the current teacher question
+  isRetryAttempt: boolean,        // true if this is already the follow-up attempt
+  availableQuestions: string[],   // teacher-set questions in order
+  questionsAsked: string[]        // full history of questions shown so far
 ): Promise<{
   nextQuestion: string;
   transcript: string;
   isEvaluation: boolean;
   score?: number;
-  questionCount: number;
-  questionsAsked: string[];
+  nextQuestionIndex: number;
+  isNextRetryAttempt: boolean;
+  updatedQuestionsAsked: string[];
 }> {
-  try {
-    const SYSTEM_PROMPT = `You are an experienced technical interviewer.
-Rule: 
-- Actively listen to the candidate's audio.
-- Provide a literal technical transcript of what the candidate said.
-- Ask 2-4 questions total based on response quality.
-- If complete, return "EVALUATION:" followed by a very detailed professional report in Markdown.
-- If answer is WRONG: Ask ONE follow-up on same topic.
-- If answer is GOOD: Move to next topic.
+  const totalQuestions = availableQuestions.length;
 
-Response Format (JSON ONLY):
+  try {
+    // Build a clear context for the AI about which question we are on and whether this is a retry
+    const currentTeacherQuestion = availableQuestions[currentQuestionIndex] || "General question";
+    const isLastQuestion = currentQuestionIndex >= totalQuestions - 1;
+
+    const SYSTEM_PROMPT = `You are an academic oral examiner conducting a university interview.
+
+STRICT RULES:
+1. Listen carefully to the student's audio response.
+2. Provide an accurate transcript of what the student said.
+3. Evaluate whether the answer adequately addresses the question.
+4. Decide the next action based on these rules:
+   - If the answer is ADEQUATE/GOOD: Move to the next question (or end if all done).
+   - If the answer is POOR/INCOMPLETE and this is NOT a retry: Ask ONE helpful follow-up on the SAME topic to guide the student.
+   - If the answer is POOR/INCOMPLETE and this IS a retry (second chance already given): Move to the next question regardless.
+5. When all questions are done, return EVALUATION.
+
+Response Format (JSON ONLY - no other text):
 {
-  "transcript": "literal transcript of audio",
-  "nextStep": "next question text OR EVALUATION: full report in markdown"
+  "transcript": "exact transcript of what the student said",
+  "answerQuality": "good" | "poor",
+  "nextStep": "NEXT_QUESTION | RETRY_FOLLOWUP | EVALUATION"
+  "followUpQuestion": "the guided follow-up question text (only if nextStep is RETRY_FOLLOWUP)",
+  "evaluationReport": "full markdown evaluation report (only if nextStep is EVALUATION)"
 }`;
 
     const contents = [
       { text: SYSTEM_PROMPT },
       {
-        text: `Interview Context:
-- Question ${currentQuestionCount} | Total asked: ${
-          currentQuestionsAsked.length
-        }
-- Previous: "${
-          currentQuestionsAsked[currentQuestionsAsked.length - 1] || "None"
-        }"
-- History: ${
-          currentQuestionsAsked.length > 0
-            ? currentQuestionsAsked.join(" | ")
-            : "None"
-        }
+        text: `Current Interview State:
+- Teacher Question #${currentQuestionIndex + 1} of ${totalQuestions}: "${currentTeacherQuestion}"
+- Is this a retry/follow-up attempt? ${isRetryAttempt ? "YES (this is the second chance — if poor, move to next question)" : "NO (first attempt)"}
+- Is this the last teacher question? ${isLastQuestion ? "YES" : "NO"}
+- Full question history: ${questionsAsked.join(" → ")}
 
-Based on the audio response, decide: next question or "EVALUATION:" if assessment complete.`,
+Evaluate the student's audio response and decide the next step according to the rules.`,
       },
       {
         inlineData: {
@@ -99,10 +121,10 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
     ];
 
     const response = await genAI.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash-preview-04-17",
       config: {
         thinkingConfig: {
-          thinkingLevel: (currentQuestionsAsked.length >= 2) ? ThinkingLevel.HIGH : ThinkingLevel.LOW,
+          thinkingLevel: ThinkingLevel.LOW,
         },
         responseMimeType: "application/json",
       },
@@ -110,55 +132,79 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
     });
 
     const aiData = JSON.parse(response.text || "{}");
-    const aiResponse = aiData.nextStep || "Could you please elaborate on your previous answer?";
     const transcript = aiData.transcript || "";
+    const answerQuality = aiData.answerQuality || "good";
+    const nextStep = aiData.nextStep || "NEXT_QUESTION";
 
-    if (aiResponse.startsWith("EVALUATION:")) {
+    // --- Decision logic ---
+
+    if (nextStep === "RETRY_FOLLOWUP" && !isRetryAttempt) {
+      // First failure - give a guided follow-up on the same question
+      const followUp = aiData.followUpQuestion || `Could you elaborate further on: "${currentTeacherQuestion}"?`;
       return {
-        nextQuestion: aiResponse,
-        transcript: transcript,
-        isEvaluation: true,
-        score: extractScore(aiResponse),
-        questionCount: currentQuestionCount,
-        questionsAsked: currentQuestionsAsked,
-      };
-    } else {
-      const newQuestionCount = currentQuestionCount + 1;
-      const newQuestionsAsked = [...currentQuestionsAsked, aiResponse];
-      return {
-        nextQuestion: aiResponse,
-        transcript: transcript,
+        nextQuestion: followUp,
+        transcript,
         isEvaluation: false,
-        questionCount: newQuestionCount,
-        questionsAsked: newQuestionsAsked,
+        nextQuestionIndex: currentQuestionIndex, // same question index
+        isNextRetryAttempt: true,               // next submission is a retry
+        updatedQuestionsAsked: [...questionsAsked, followUp],
       };
     }
+
+    // Either a good answer, or a retry that was still poor → move to next question
+    const nextIndex = currentQuestionIndex + 1;
+
+    if (nextIndex >= totalQuestions) {
+      // All questions done → evaluate
+      const evalText = nextStep === "EVALUATION" && aiData.evaluationReport
+        ? `EVALUATION:\n${aiData.evaluationReport}`
+        : `EVALUATION: Thank you for completing the interview. The student answered ${totalQuestions} question(s).`;
+      return {
+        nextQuestion: evalText,
+        transcript,
+        isEvaluation: true,
+        score: extractScore(evalText),
+        nextQuestionIndex: nextIndex,
+        isNextRetryAttempt: false,
+        updatedQuestionsAsked: [...questionsAsked],
+      };
+    }
+
+    // Move to next teacher question
+    const nextQ = availableQuestions[nextIndex];
+    return {
+      nextQuestion: nextQ,
+      transcript,
+      isEvaluation: false,
+      nextQuestionIndex: nextIndex,
+      isNextRetryAttempt: false,
+      updatedQuestionsAsked: [...questionsAsked, nextQ],
+    };
   } catch (error) {
     console.error("Error processing audio with AI:", error);
 
-    if (currentQuestionsAsked.length >= 5) {
+    // Fallback: move to next question on error
+    const nextIndex = currentQuestionIndex + 1;
+    if (nextIndex >= availableQuestions.length) {
       return {
-        nextQuestion:
-          "EVALUATION: Thank you for completing the interview. Score: 21/30",
+        nextQuestion: "EVALUATION: Thank you for completing the interview. Score: 21/30",
         transcript: "Technical issue occurred during transcription.",
         isEvaluation: true,
         score: 21,
-        questionCount: currentQuestionCount,
-        questionsAsked: currentQuestionsAsked,
-      };
-    } else {
-      const fallbackQuestion =
-        availableQuestions[
-          Math.floor(Math.random() * availableQuestions.length)
-        ] || "Can you explain your experience with this subject?";
-      return {
-        nextQuestion: fallbackQuestion,
-        transcript: "Fallback transcript due to AI error.",
-        isEvaluation: false,
-        questionCount: currentQuestionCount + 1,
-        questionsAsked: [...currentQuestionsAsked, fallbackQuestion],
+        nextQuestionIndex: nextIndex,
+        isNextRetryAttempt: false,
+        updatedQuestionsAsked: questionsAsked,
       };
     }
+    const fallbackQuestion = availableQuestions[nextIndex];
+    return {
+      nextQuestion: fallbackQuestion,
+      transcript: "Fallback transcript due to AI error.",
+      isEvaluation: false,
+      nextQuestionIndex: nextIndex,
+      isNextRetryAttempt: false,
+      updatedQuestionsAsked: [...questionsAsked, fallbackQuestion],
+    };
   }
 }
 
@@ -177,6 +223,8 @@ export async function POST(
       questionText,
       questionCount,
       questionsAsked,
+      currentQuestionIndex,  // NEW: 0-based index of current teacher question
+      isRetryAttempt,        // NEW: whether this is a follow-up retry
     } = body;
 
     // Validate required fields
@@ -226,7 +274,7 @@ export async function POST(
       );
     }
 
-    // Get available questions for this interview
+    // Get available questions for this interview (teacher-set, in order)
     const questions = await db
       .select()
       .from(interviewQuestions)
@@ -256,10 +304,9 @@ export async function POST(
       audioUrl = blob.url;
     } catch (error) {
       console.error("Error uploading audio to Vercel Blob:", error);
-      // Continue even if upload fails - we'll still process the audio
     }
 
-    // Store this answer in the database with transcript
+    // Store this answer in the database
     const currentQuestionOrder = questionCount || 1;
     await db.insert(questionAnswers).values({
       responseId: responseId,
@@ -268,25 +315,26 @@ export async function POST(
         questionsAsked?.[questionsAsked.length - 1] ||
         "Question",
       audioDuration: duration || null,
-      audioTranscript: "", // Initially empty, will update after AI process
+      audioTranscript: "",
       questionOrder: currentQuestionOrder,
       audioUrl: audioUrl,
     });
 
-    // Process audio with AI
-    const currentQuestionCount = questionCount || 1;
+    // Process audio with AI using new flow logic
+    const resolvedCurrentQuestionIndex = currentQuestionIndex ?? 0;
+    const resolvedIsRetryAttempt = isRetryAttempt ?? false;
     const currentQuestionsAsked = questionsAsked || [];
 
     const aiResult = await processAudioWithAI(
       audio,
       mimeType,
-      currentQuestionCount,
-      currentQuestionsAsked,
-      availableQuestions
+      resolvedCurrentQuestionIndex,
+      resolvedIsRetryAttempt,
+      availableQuestions,
+      currentQuestionsAsked
     );
 
     // Update the record with the actual transcript from AI
-    // To keep it simple, we update the last inserted record for this response
     const lastAnswer = await db
       .select({ id: questionAnswers.id })
       .from(questionAnswers)
@@ -322,8 +370,10 @@ export async function POST(
           interviewComplete: true,
           evaluation: aiResult.nextQuestion,
           score: aiResult.score,
-          questionCount: aiResult.questionCount,
-          questionsAsked: aiResult.questionsAsked,
+          questionCount: currentQuestionOrder + 1,
+          questionsAsked: aiResult.updatedQuestionsAsked,
+          currentQuestionIndex: aiResult.nextQuestionIndex,
+          isRetryAttempt: aiResult.isNextRetryAttempt,
         },
       });
     }
@@ -334,8 +384,10 @@ export async function POST(
       data: {
         interviewComplete: false,
         nextQuestion: aiResult.nextQuestion,
-        questionCount: aiResult.questionCount,
-        questionsAsked: aiResult.questionsAsked,
+        questionCount: currentQuestionOrder + 1,
+        questionsAsked: aiResult.updatedQuestionsAsked,
+        currentQuestionIndex: aiResult.nextQuestionIndex,
+        isRetryAttempt: aiResult.isNextRetryAttempt,
         mimeType,
         duration: duration || null,
         size: audioBuffer.length,
