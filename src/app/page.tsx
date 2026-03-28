@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Mic, ArrowRight, Sparkles, Zap, Shield, BarChart3,
   ChevronRight, Check, Play, Star, Users, TrendingUp,
-  Brain, Globe, Lock, Activity, AudioWaveform, MessagesSquare, Plus, Menu, X
+  Brain, Globe, Lock, Activity, AudioWaveform, MessagesSquare, Plus as PlusIcon, Menu, X
 } from "lucide-react";
 
 // Animation variants
@@ -627,7 +627,7 @@ export default function Home() {
                   step: "01",
                   title: "Create an Evaluation",
                   description: "Define the role, select your domain, set time limits, and either write custom questions or let AI generate a calibrated question bank.",
-                  icon: Plus,
+                  icon: PlusIcon,
                 },
                 {
                   step: "02",
