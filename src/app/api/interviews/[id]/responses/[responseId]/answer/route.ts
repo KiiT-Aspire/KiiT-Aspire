@@ -7,7 +7,7 @@ import {
   interviewQuestions,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { put } from "@vercel/blob";
 
 // Supported audio formats
@@ -23,7 +23,7 @@ const SUPPORTED_FORMATS = [
 
 // Initialize Google AI
 const genAI = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
+  apiKey: process.env.GOOGLE_GENAI_API_KEY,
 });
 
 // Extract score from evaluation text
@@ -50,32 +50,27 @@ async function processAudioWithAI(
   availableQuestions: string[]
 ): Promise<{
   nextQuestion: string;
+  transcript: string;
   isEvaluation: boolean;
   score?: number;
   questionCount: number;
   questionsAsked: string[];
 }> {
   try {
-    const SYSTEM_PROMPT = `You are an experienced technical interviewer conducting an adaptive interview.
+    const SYSTEM_PROMPT = `You are an experienced technical interviewer.
+Rule: 
+- Actively listen to the candidate's audio.
+- Provide a literal technical transcript of what the candidate said.
+- Ask 2-4 questions total based on response quality.
+- If complete, return "EVALUATION:" followed by a very detailed professional report in Markdown.
+- If answer is WRONG: Ask ONE follow-up on same topic.
+- If answer is GOOD: Move to next topic.
 
-Available Questions:
-${availableQuestions.map((q, index) => `${index + 1}. ${q}`).join("\n")}
-
-Interview Rules:
-- Ask 2-4 questions total based on response quality
-- If answer is WRONG/INCOMPLETE: Ask ONE follow-up on same topic, then move on
-- If answer is GOOD: Move to next topic
-- If candidate can't answer: Switch to different topic immediately
-- Stop when you have sufficient assessment (minimum 3 questions)
-
-Response Format:
-- Return ONLY the next question text
-- When complete, return "EVALUATION:" followed by detailed feedback
-
-Evaluation:
-- Score out of 30 points
-- Consider technical accuracy, depth, and communication
-- Provide specific feedback and topic-wise performance summary`;
+Response Format (JSON ONLY):
+{
+  "transcript": "literal transcript of audio",
+  "nextStep": "next question text OR EVALUATION: full report in markdown"
+}`;
 
     const contents = [
       { text: SYSTEM_PROMPT },
@@ -104,21 +99,24 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
     ];
 
     const response = await genAI.models.generateContent({
-      model: "gemini-2.5-flash-lite",
+      model: "gemini-3-flash-preview",
       config: {
         thinkingConfig: {
-          thinkingBudget: 512,
+          thinkingLevel: (currentQuestionsAsked.length >= 2) ? ThinkingLevel.HIGH : ThinkingLevel.LOW,
         },
+        responseMimeType: "application/json",
       },
       contents: contents,
     });
 
-    const aiResponse =
-      response.text || "Could you please elaborate on your previous answer?";
+    const aiData = JSON.parse(response.text || "{}");
+    const aiResponse = aiData.nextStep || "Could you please elaborate on your previous answer?";
+    const transcript = aiData.transcript || "";
 
     if (aiResponse.startsWith("EVALUATION:")) {
       return {
         nextQuestion: aiResponse,
+        transcript: transcript,
         isEvaluation: true,
         score: extractScore(aiResponse),
         questionCount: currentQuestionCount,
@@ -129,6 +127,7 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
       const newQuestionsAsked = [...currentQuestionsAsked, aiResponse];
       return {
         nextQuestion: aiResponse,
+        transcript: transcript,
         isEvaluation: false,
         questionCount: newQuestionCount,
         questionsAsked: newQuestionsAsked,
@@ -141,6 +140,7 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
       return {
         nextQuestion:
           "EVALUATION: Thank you for completing the interview. Score: 21/30",
+        transcript: "Technical issue occurred during transcription.",
         isEvaluation: true,
         score: 21,
         questionCount: currentQuestionCount,
@@ -153,6 +153,7 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
         ] || "Can you explain your experience with this subject?";
       return {
         nextQuestion: fallbackQuestion,
+        transcript: "Fallback transcript due to AI error.",
         isEvaluation: false,
         questionCount: currentQuestionCount + 1,
         questionsAsked: [...currentQuestionsAsked, fallbackQuestion],
@@ -258,7 +259,7 @@ export async function POST(
       // Continue even if upload fails - we'll still process the audio
     }
 
-    // Store this answer in the database
+    // Store this answer in the database with transcript
     const currentQuestionOrder = questionCount || 1;
     await db.insert(questionAnswers).values({
       responseId: responseId,
@@ -267,6 +268,7 @@ export async function POST(
         questionsAsked?.[questionsAsked.length - 1] ||
         "Question",
       audioDuration: duration || null,
+      audioTranscript: "", // Initially empty, will update after AI process
       questionOrder: currentQuestionOrder,
       audioUrl: audioUrl,
     });
@@ -282,6 +284,24 @@ export async function POST(
       currentQuestionsAsked,
       availableQuestions
     );
+
+    // Update the record with the actual transcript from AI
+    // To keep it simple, we update the last inserted record for this response
+    const lastAnswer = await db
+      .select({ id: questionAnswers.id })
+      .from(questionAnswers)
+      .where(eq(questionAnswers.responseId, responseId))
+      .orderBy(questionAnswers.answeredAt)
+      .limit(1);
+
+    if (lastAnswer.length > 0) {
+      await db
+        .update(questionAnswers)
+        .set({
+          audioTranscript: aiResult.transcript,
+        })
+        .where(eq(questionAnswers.id, lastAnswer[0].id));
+    }
 
     // If evaluation is complete, update the response record
     if (aiResult.isEvaluation) {

@@ -1,11 +1,11 @@
-import { GoogleGenAI, Modality, TurnCoverage } from "@google/genai";
+import { GoogleGenAI, Modality, TurnCoverage, ThinkingLevel } from "@google/genai";
 import { NextResponse } from "next/server";
 
 export async function POST() {
   try {
     // Initialize the Google GenAI client with your API key
     const client = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey: process.env.GOOGLE_GENAI_API_KEY,
     });
 
     // Set expiration time to 30 minutes from now
@@ -17,12 +17,15 @@ export async function POST() {
         uses: 1, // Default usage limit
         expireTime: expireTime,
         liveConnectConstraints: {
-          model: "gemini-live-2.5-flash-preview",
+          model: "gemini-3.1-flash-live-preview",
           config: {
+            thinkingConfig: {
+              thinkingLevel: ThinkingLevel.LOW,
+            },
             systemInstruction: `You are a helpful AI interviewer. Conduct professional interviews by asking relevant questions about the candidate's experience, skills, and qualifications. Be encouraging and provide constructive feedback.`,
             responseModalities: [Modality.AUDIO],
             outputAudioTranscription: {
-              enabled: true,
+              languageCodes: ["en-IN"],
             },
             speechConfig: {
               languageCode: "en-IN",

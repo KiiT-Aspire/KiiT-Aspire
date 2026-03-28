@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 // Supported audio formats
 const SUPPORTED_FORMATS = [
@@ -47,7 +47,7 @@ Goal: Efficiently assess candidate's DSA knowledge through adaptive questioning.
 
 // Initialize Google AI
 const genAI = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
+  apiKey: process.env.GOOGLE_GENAI_API_KEY,
 });
 
 async function processAudioWithAI(
@@ -92,10 +92,10 @@ Based on the audio response, decide: next question or "EVALUATION:" if assessmen
 
     // Generate response using Gemini model
     const response = await genAI.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       config: {
         thinkingConfig: {
-          thinkingBudget: 512,
+          thinkingLevel: ThinkingLevel.MEDIUM,
         },
       },
       contents: contents,

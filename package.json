@@ -12,7 +12,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@google/genai": "^1.13.0",
+    "@google/genai": "^1.46.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-select": "^2.2.5",
@@ -25,18 +25,21 @@
     "dotenv": "^17.2.1",
     "drizzle-orm": "^0.44.4",
     "framer-motion": "^12.38.0",
-    "lucide-react": "^0.539.0",
+    "google-auth-library": "^10.6.2",
+    "lucide-react": "^1.7.0",
     "mime": "^4.0.7",
     "next": "15.4.10",
+    "p-retry": "^8.0.0",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
+    "react-markdown": "^10.1.0",
     "react-media-recorder": "^1.7.2",
     "react-speech-recognition": "^4.0.1",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
