@@ -3,11 +3,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap, FileText, BarChart3, Home,
-  LogOut, ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { UserButton, useUser } from "@clerk/nextjs";
 
 const menuItems = [
   { icon: Home, label: "Overview", href: "/", isExternal: true },
@@ -18,6 +19,7 @@ const menuItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { user } = useUser();
 
   return (
     <motion.div
@@ -131,54 +133,46 @@ export default function Sidebar() {
         })}
       </div>
 
-      {/* Bottom section */}
+      {/* Bottom section — Clerk UserButton */}
       <div className="p-3 border-t border-green-200 bg-[#f0faf0]">
-        {/* User Avatar Area */}
-        {!collapsed && (
+        {!collapsed ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-3 px-3 py-2.5 mb-1 rounded-[10px] bg-white border border-green-200"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] bg-white border border-green-200"
           >
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-              A
-            </div>
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: "w-7 h-7",
+                },
+              }}
+            />
             <div className="flex-1 overflow-hidden">
-              <p className="text-[12px] font-medium text-gray-800 truncate">Faculty</p>
-              <p className="text-[11px] text-gray-400 truncate">kiit.ac.in</p>
+              <p className="text-[12px] font-medium text-gray-800 truncate">
+                {user?.fullName ?? user?.firstName ?? "Teacher"}
+              </p>
+              <p className="text-[11px] text-gray-400 truncate">
+                {user?.primaryEmailAddress?.emailAddress ?? "kiit.ac.in"}
+              </p>
             </div>
           </motion.div>
+        ) : (
+          <div className="flex justify-center py-1">
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: "w-7 h-7",
+                },
+              }}
+            />
+          </div>
         )}
-
-        <Link href="#">
-          <motion.div
-            whileHover={{ x: 2 }}
-            whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all group cursor-pointer"
-          >
-            <LogOut size={16} className="shrink-0 transition-colors group-hover:text-red-400" />
-            <AnimatePresence>
-              {!collapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[13px] font-medium whitespace-nowrap overflow-hidden"
-                >
-                  Sign Out
-                </motion.span>
-              )}
-            </AnimatePresence>
-
-            {collapsed && (
-              <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-white border border-green-200 rounded-[8px] text-[12px] text-gray-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-50">
-                Sign Out
-              </div>
-            )}
-          </motion.div>
-        </Link>
       </div>
     </motion.div>
   );
 }
+
+

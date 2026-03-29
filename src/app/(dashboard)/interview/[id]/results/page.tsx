@@ -11,8 +11,21 @@ import {
   Loader2, ArrowLeft, User, Calendar, Award, Clock,
   CheckCircle2, XCircle, AlertCircle, Download, Eye,
   TrendingUp, BarChart3, Users, Activity, ChevronLeft,
-  ChevronRight, AudioWaveform, Filter
+  ChevronRight, AudioWaveform, Filter, Trash2
 } from "lucide-react";
+import dynamic from "next/dynamic";
+import type { ComponentType } from "react";
+
+interface VideoRTCWidgetProps {
+  responseId: string;
+  studentName?: string;
+  mode: "student" | "teacher";
+}
+
+const VideoRTCWidget = dynamic(
+  () => import("@/components/video/VideoRTCWidget") as Promise<{ default: ComponentType<VideoRTCWidgetProps> }>,
+  { ssr: false, loading: () => null }
+);
 
 interface ResponseData {
   id: string;
@@ -75,6 +88,7 @@ function ScoreBar({ score }: { score: number | null }) {
   );
 }
 
+
 export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
@@ -89,9 +103,11 @@ export default function ResultsPage() {
   const [sortBy, setSortBy] = useState<string>("date");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [isMounted, setIsMounted] = useState(false);
   const limit = 20;
 
   useEffect(() => {
+    setIsMounted(true);
     if (interviewId) { fetchInterview(); fetchResponses(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interviewId, statusFilter, currentPage]);
@@ -160,6 +176,24 @@ export default function ResultsPage() {
     toast.success("CSV exported!");
   };
 
+  const deleteInterview = async () => {
+    if (!confirm("Are you sure you want to delete this interview and all its results? This action cannot be undone.")) return;
+    
+    try {
+      const res = await fetch(`/api/interviews/${interviewId}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Interview deleted successfully");
+        router.push("/interview");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to delete interview");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("An error occurred while deleting");
+    }
+  };
+
   const sorted = [...responses].sort((a, b) => {
     if (sortBy === "score") return (b.score ?? 0) - (a.score ?? 0);
     return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
@@ -198,15 +232,28 @@ export default function ResultsPage() {
               <p className="text-zinc-500 text-[14px]">{interviewName || "Loading…"} {interviewSubject && `· ${interviewSubject}`}</p>
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={exportCSV}
-              className="flex items-center gap-2 h-10 px-5 rounded-[11px] border border-white/[0.08] bg-white/[0.03] text-[13px] font-semibold text-zinc-300 hover:text-white hover:bg-white/[0.06] transition-all"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </motion.button>
+            <div className="flex items-center gap-3">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={deleteInterview}
+                className="flex items-center gap-2 h-10 px-4 rounded-[11px] border border-red-500/20 bg-red-500/10 text-[13px] font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-all"
+                title="Delete Interview"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Delete</span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={exportCSV}
+                className="flex items-center gap-2 h-10 px-5 rounded-[11px] border border-white/[0.08] bg-white/[0.03] text-[13px] font-semibold text-zinc-300 hover:text-white hover:bg-white/[0.06] transition-all"
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </motion.button>
+            </div>
           </motion.div>
         </motion.div>
 
@@ -230,6 +277,29 @@ export default function ResultsPage() {
                 </motion.div>
               );
             })}
+          </motion.div>
+        )}
+
+        {/* Live Video Feeds Area */}
+        {isMounted && sorted.filter(r => r.status === "in_progress").length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="pt-2">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_12px_rgba(239,68,68,0.5)]" />
+                <h2 className="text-[14px] font-bold text-white tracking-widest uppercase flex items-center gap-2">Live Monitor <span className="bg-red-500/20 text-red-500 text-[10px] px-2 py-0.5 rounded-full">{sorted.filter(r => r.status === "in_progress").length} Active</span></h2>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {sorted.filter(r => r.status === "in_progress").map(r => (
+                <div key={r.id} className="relative aspect-video rounded-xl overflow-hidden bg-[#050505] border border-white/[0.05] hover:border-white/10 transition-colors shadow-lg">
+                  <VideoRTCWidget responseId={r.id} studentName={r.studentName} mode="teacher" />
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded backdrop-blur z-10">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-widest truncate max-w-[120px]">{r.studentName || "Candidate"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
         )}
 

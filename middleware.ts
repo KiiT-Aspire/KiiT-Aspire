@@ -1,45 +1,37 @@
-import { NextRequest, NextResponse } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-const allowedHeaders = [
-	"Content-Type",
-	"Authorization",
-	"X-Requested-With",
-	"Accept",
-	"Origin",
-	"Referer",
-	"User-Agent",
-	"Sec-Fetch-Mode",
-	"Sec-Fetch-Site",
-	"Sec-Fetch-Dest",
-	"Access-Control-Allow-Credentials",
-].join(", ");
+// Dashboard routes that require teacher authentication
+const isTeacherRoute = createRouteMatcher([
+  "/interview(.*)",
+  "/analytics(.*)",
+  "/settings(.*)",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+]);
 
-export async function middleware(request: NextRequest) {
-	const origin = request.headers.get("origin");
-	const allowOrigin = origin || "*";
+// Student interview route — always public, no Clerk auth needed
+const isStudentRoute = createRouteMatcher([
+  "/interviewee(.*)",
+]);
 
-	// Add CORS headers for everything
-	if (request.method === "OPTIONS") {
-		const response = new NextResponse(null, { status: 204 });
-		response.headers.set("Access-Control-Allow-Origin", allowOrigin);
-		response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-		response.headers.set("Access-Control-Allow-Headers", allowedHeaders);
-		response.headers.set("Access-Control-Allow-Credentials", "true");
-		response.headers.set("Vary", "Origin");
-		return response;
-	}
-	const response = NextResponse.next();
-	response.headers.set("Access-Control-Allow-Origin", allowOrigin);
-	response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-	response.headers.set("Access-Control-Allow-Headers", allowedHeaders);
-	response.headers.set("Access-Control-Allow-Credentials", "true");
-	response.headers.set("Vary", "Origin");
-	return response;
-}
+export default clerkMiddleware(async (auth, request) => {
+  // Student routes are fully public — students only enter name/email
+  if (isStudentRoute(request)) {
+    return NextResponse.next();
+  }
+
+  // Protect all teacher/dashboard routes
+  if (isTeacherRoute(request)) {
+    await auth.protect();
+  }
+});
 
 export const config = {
-	matcher: [
-		// Exclude authentication routes from middleware
-		"/((?!api/access|api/auth|_next/static|_next/image|favicon.ico).*)"
-	], 
+  matcher: [
+    // Skip Next.js internals and static files
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for API routes
+    "/(api|trpc)(.*)",
+  ],
 };

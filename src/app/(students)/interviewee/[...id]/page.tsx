@@ -8,11 +8,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import toast, { Toaster } from "react-hot-toast";
 import dynamic from "next/dynamic";
+import type { ComponentType } from "react";
 import {
   Clock, Mic, MicOff, CheckCircle2, AlertCircle, Play,
   Loader2, Sparkles, AudioWaveform, ChevronRight, User,
-  Mail, Shield, BookOpen, Zap, Radio, GraduationCap
+  Mail, Shield, BookOpen, Zap, Radio, GraduationCap, Camera
 } from "lucide-react";
+
+interface VideoRTCWidgetProps {
+  responseId: string;
+  studentName?: string;
+  mode: "student" | "teacher";
+}
+
+// Dynamically import the entire RealtimeKit video component with ssr:false.
+// This prevents @cloudflare/realtimekit-react from ever running on the server,
+// which was causing "React Client Manifest" crashes with Webpack/RSC.
+const VideoRTCWidget = dynamic(
+  () => import("@/components/video/VideoRTCWidget") as Promise<{ default: ComponentType<VideoRTCWidgetProps> }>,
+  { ssr: false, loading: () => null }
+);
 
 const ReactMediaRecorder = dynamic(
   () => import("react-media-recorder").then((mod) => mod.ReactMediaRecorder),
@@ -67,7 +82,8 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-export default function IntervieweePage() {
+
+function IntervieweePageInner() {
   const params = useParams();
   const interviewId = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -268,7 +284,7 @@ export default function IntervieweePage() {
         setIsProcessing(false);
       }
     },
-    [responseId, interviewId, currentQuestion, questionCount, questionsAsked]
+    [responseId, interviewId, currentQuestion, questionCount, questionsAsked, currentQuestionIndex, isRetryAttempt]
   );
 
   useEffect(() => {
@@ -526,6 +542,15 @@ export default function IntervieweePage() {
       </div>
       <div className="fixed inset-0 pointer-events-none opacity-[0.015] z-0" style={{ backgroundImage: "linear-gradient(rgba(22,163,74,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(22,163,74,0.5) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
 
+      {/* Video RTC — loaded client-only via dynamic import */}
+      {interviewStarted && !interviewComplete && responseId && (
+        <VideoRTCWidget
+          responseId={responseId}
+          studentName={studentName}
+          mode="student"
+        />
+      )}
+
       <Toaster position="top-right" toastOptions={{ style: { background: "#fff", color: "#111", border: "1px solid #e5e7eb", borderRadius: "12px" } }} />
 
       {/* Header */}
@@ -609,7 +634,7 @@ export default function IntervieweePage() {
                   transition={{ duration: 0.4 }}
                   className="text-[1.5rem] sm:text-[2rem] font-bold text-gray-900 leading-tight tracking-tight"
                 >
-                  "{currentQuestion}"
+                  &quot;{currentQuestion}&quot;
                 </motion.h2>
               </AnimatePresence>
 
@@ -750,4 +775,8 @@ export default function IntervieweePage() {
       </main>
     </div>
   );
+}
+
+export default function IntervieweePage() {
+  return <IntervieweePageInner />;
 }

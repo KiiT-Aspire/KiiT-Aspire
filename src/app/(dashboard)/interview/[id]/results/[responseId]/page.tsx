@@ -5,12 +5,18 @@ import { useParams, useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import dynamic from "next/dynamic";
 import {
-  Loader2, ArrowLeft, User, Calendar, Award, Clock,
-  CheckCircle2, XCircle, AlertCircle, Mail, Volume2,
-  MessageSquare, Sparkles, Play, Activity, Mic, Pause,
-  ChevronDown, ChevronUp, FileText, BadgeCheck
+  ArrowLeft, Calendar, Award, Clock, Activity, Mic, Pause,
+  ChevronDown, ChevronUp, FileText, Camera, Play, Mail, AlertCircle, Sparkles,
+  BadgeCheck, XCircle
 } from "lucide-react";
+
+// Dynamically imported with ssr:false — cloudflare realtimekit is browser-only
+const VideoRTCWidget = dynamic(
+  () => import("@/components/video/VideoRTCWidget"),
+  { ssr: false, loading: () => null }
+);
 
 interface QuestionAnswer {
   questionText: string;
@@ -90,7 +96,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function ResponseDetailPage() {
+function ResponseDetailPageInner() {
   const params = useParams();
   const router = useRouter();
   const interviewId = params.id as string;
@@ -104,7 +110,10 @@ export default function ResponseDetailPage() {
 
   useEffect(() => {
     if (interviewId && responseId) fetchResponseDetails();
-    return () => { if (audioRef.current) audioRef.current.pause(); };
+    return () => {
+      const el = audioRef.current;
+      if (el) el.pause();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interviewId, responseId]);
 
@@ -124,7 +133,7 @@ export default function ResponseDetailPage() {
           startedAt: data.data.startedAt,
           completedAt: data.data.completedAt,
           timeTaken: data.data.timeTaken,
-          questionAnswers: (data.data.answers || []).map((a: any) => ({
+          questionAnswers: (data.data.answers || []).map((a: { questionText: string; audioUrl: string | null; audioTranscript: string | null; audioDuration: number | null; questionOrder: number; answeredAt: string }) => ({
             questionText: a.questionText,
             audioUrl: a.audioUrl,
             audioTranscript: a.audioTranscript,
@@ -237,6 +246,12 @@ export default function ResponseDetailPage() {
           {/* Main Evaluation & Log */}
           <div className="lg:col-span-8 space-y-10">
             
+            {response.status === "in_progress" && (
+              <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <VideoRTCWidget responseId={responseId} mode="teacher" />
+              </motion.section>
+            )}
+
             {/* AI Report Card */}
             {response.evaluation && (
               <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative group">
@@ -370,7 +385,7 @@ export default function ResponseDetailPage() {
                                       >
                                         <div className="pt-4 border-t border-white/[0.04] mt-4">
                                           <p className="text-[14px] leading-relaxed text-zinc-400 italic font-medium">
-                                            "{qa.audioTranscript}"
+                                            &quot;{qa.audioTranscript}&quot;
                                           </p>
                                         </div>
                                       </motion.div>
@@ -471,4 +486,8 @@ export default function ResponseDetailPage() {
       </div>
     </div>
   );
+}
+
+export default function ResponseDetailPage() {
+  return <ResponseDetailPageInner />;
 }

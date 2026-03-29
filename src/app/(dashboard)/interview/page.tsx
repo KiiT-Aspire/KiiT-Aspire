@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import toast, { Toaster } from "react-hot-toast";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
@@ -68,10 +69,11 @@ const subjectThemes: Record<string, { bg: string; text: string; ring: string }> 
 
 export default function InterviewPage() {
   const router = useRouter();
+  const { user } = useUser();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
-  const [userId, setUserId] = useState<string>("");
+  const userId = user?.id ?? "";
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -97,18 +99,17 @@ export default function InterviewPage() {
   ];
 
   useEffect(() => {
+    if (!userId) return;
     const initializePage = async () => {
       try {
-        const mockUserId = "mock-teacher-id";
-        setUserId(mockUserId);
-        await fetchInterviews(mockUserId);
+        await fetchInterviews(userId);
       } catch (error) {
         console.error("Failed to initialize:", error);
         setLoading(false);
       }
     };
     initializePage();
-  }, [router]);
+  }, [userId]);
 
   const fetchInterviews = async (createdBy?: string) => {
     try {
@@ -486,6 +487,13 @@ export default function InterviewPage() {
                            </div>
                            
                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); deleteInterview(item.id); }} 
+                                className="p-2.5 rounded-xl bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600 transition-all border border-gray-200 hover:border-red-200"
+                                title="Delete Interview"
+                              >
+                                 <Trash2 className="w-5 h-5" />
+                              </button>
                               <button onClick={() => prepareView(item)} className="p-2.5 rounded-xl bg-gray-100 text-gray-500 hover:bg-green-100 hover:text-green-700 transition-all border border-gray-200 hover:border-green-300">
                                  <Eye className="w-5 h-5" />
                               </button>
