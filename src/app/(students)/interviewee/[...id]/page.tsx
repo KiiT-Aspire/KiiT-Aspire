@@ -115,6 +115,7 @@ function IntervieweePageInner() {
   const [questionsAsked, setQuestionsAsked] = useState<string[]>([]);
   const [recordedAudioDuration, setRecordedAudioDuration] = useState<number>(0);
   const [isStarting, setIsStarting] = useState(false);
+  const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "pending" | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [isRetryAttempt, setIsRetryAttempt] = useState<boolean>(false);
 
@@ -184,6 +185,22 @@ function IntervieweePageInner() {
     return () => { if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current); };
   }, [interviewStarted, interviewComplete, timeRemaining, endInterviewDueToTimeout]);
 
+  const requestCameraPermission = useCallback(async () => {
+    setCameraPermission("pending");
+    try {
+      // Request both camera and mic upfront so the browser never interrupts during the interview
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      // Stop the preview tracks — camera will be started by VideoRTCWidget, mic by ReactMediaRecorder
+      stream.getTracks().forEach(t => t.stop());
+      setCameraPermission("granted");
+      return true;
+    } catch {
+      setCameraPermission("denied");
+      toast.error("Camera and microphone access are required for the interview. Please allow access and try again.");
+      return false;
+    }
+  }, []);
+
   const startInterview = useCallback(async () => {
     if (!studentName.trim() || !studentEmail.trim()) {
       toast.error("Please enter your name and email");
@@ -191,6 +208,14 @@ function IntervieweePageInner() {
     }
     if (!interviewId) return;
     setIsStarting(true);
+
+    // Request camera permission before starting
+    const camAllowed = await requestCameraPermission();
+    if (!camAllowed) {
+      setIsStarting(false);
+      return;
+    }
+
     try {
       const response = await fetch(`/api/interviews/${interviewId}/start`, {
         method: "POST",
@@ -218,7 +243,7 @@ function IntervieweePageInner() {
     } finally {
       setIsStarting(false);
     }
-  }, [studentName, studentEmail, interviewId, interviewDetails]);
+  }, [studentName, studentEmail, interviewId, interviewDetails, requestCameraPermission]);
 
   const sendAudioToAPI = useCallback(
     async (audioUrl: string, duration: number) => {

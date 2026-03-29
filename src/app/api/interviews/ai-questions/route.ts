@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_GENAI_API_KEY,
@@ -21,10 +21,10 @@ export async function POST(request: NextRequest) {
     Make sure each id is unique (e.g. q1, q2). Do not include any other text or markdown block wrappers. Respond straight with the valid JSON.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       config: {
         thinkingConfig: {
-          thinkingLevel: ThinkingLevel.MINIMAL,
+          thinkingBudget: 8000,
         },
       },
       contents: prompt,

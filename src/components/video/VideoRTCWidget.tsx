@@ -22,6 +22,8 @@ interface VideoRTCWidgetProps {
   studentName?: string;
   /** "student" = show local camera feed only, "teacher" = show remote feed */
   mode: "student" | "teacher";
+  /** Teacher only — when true, enables mic to talk to this student */
+  isTalking?: boolean;
 }
 
 // ─── Local video feed (student sees only their own camera) ────────────────────
@@ -134,6 +136,34 @@ function TeacherView() {
   );
 }
 
+// ─── Remote audio feed (student hears faculty when they speak) ───────────────
+
+function RemoteAudioFeed() {
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const remoteAudioTrack = useRealtimeKitSelector((m: RTKClient) => {
+    const participants = m.participants?.joined?.toArray?.() ?? [];
+    for (const p of participants) {
+      const track = (p as { audioTrack?: MediaStreamTrack }).audioTrack;
+      const enabled = (p as { audioEnabled?: boolean }).audioEnabled;
+      if (track && enabled) return track;
+    }
+    return undefined;
+  });
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (remoteAudioTrack) {
+      el.srcObject = new MediaStream([remoteAudioTrack]);
+    } else {
+      el.srcObject = null;
+    }
+  }, [remoteAudioTrack]);
+
+  return <audio ref={audioRef} autoPlay />;
+}
+
 // ─── Root component ──────────────────────────────────────────────────────────
 
 export default function VideoRTCWidget(props: VideoRTCWidgetProps) {
@@ -163,10 +193,15 @@ export default function VideoRTCWidget(props: VideoRTCWidgetProps) {
           return;
         }
 
-        const m = await initMeeting({ authToken: data.token });
+        const m = await initMeeting({
+          authToken: data.token,
+          defaults: {
+            video: props.mode === "student",
+            audio: false,
+          },
+        });
         if (!m || !mounted) return;
 
-        // Join the room (initMeeting only initialises the client)
         await m.join();
         console.log("[VideoRTC] Room joined, mode:", props.mode);
       } catch (e) {
@@ -180,7 +215,7 @@ export default function VideoRTCWidget(props: VideoRTCWidgetProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.responseId]);
 
-  // 2. Enable local camera once joined (student only)
+  // 2. Ensure local camera stays enabled for student after join
   useEffect(() => {
     if (props.mode !== "student" || !meeting) return;
 
@@ -188,9 +223,11 @@ export default function VideoRTCWidget(props: VideoRTCWidgetProps) {
     if (!self) return;
 
     const enableCam = () => {
-      self.enableVideo().catch((e: unknown) =>
-        console.error("[VideoRTC] enableVideo:", e)
-      );
+      if (!self.videoEnabled) {
+        self.enableVideo().catch((e: unknown) =>
+          console.error("[VideoRTC] enableVideo:", e)
+        );
+      }
     };
 
     if (self.roomState === "joined") {
@@ -204,10 +241,31 @@ export default function VideoRTCWidget(props: VideoRTCWidgetProps) {
     };
   }, [meeting, props.mode]);
 
+  // 3. Toggle teacher mic based on isTalking prop
+  useEffect(() => {
+    if (props.mode !== "teacher" || !meeting) return;
+
+    const self = meeting.self;
+    if (!self || self.roomState !== "joined") return;
+
+    if (props.isTalking) {
+      self.enableAudio().catch((e: unknown) =>
+        console.error("[VideoRTC] enableAudio:", e)
+      );
+    } else {
+      self.disableAudio().catch((e: unknown) =>
+        console.error("[VideoRTC] disableAudio:", e)
+      );
+    }
+  }, [meeting, props.mode, props.isTalking]);
+
   return (
     <RealtimeKitProvider value={meeting}>
       {props.mode === "student" ? (
-        <LocalVideoFeed />
+        <>
+          <LocalVideoFeed />
+          <RemoteAudioFeed />
+        </>
       ) : (
         <TeacherView />
       )}

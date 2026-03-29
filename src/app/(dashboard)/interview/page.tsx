@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 import toast, { Toaster } from "react-hot-toast";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
@@ -69,11 +69,19 @@ const subjectThemes: Record<string, { bg: string; text: string; ring: string }> 
 
 export default function InterviewPage() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+  const { isSignedIn } = useAuth();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
-  const userId = user?.id ?? "";
+  const userId = isLoaded ? (user?.id ?? "") : "";
+
+  // Redirect to sign-in if not authenticated (client-side guard)
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.replace("/sign-in");
+    }
+  }, [isLoaded, isSignedIn, router]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -99,7 +107,11 @@ export default function InterviewPage() {
   ];
 
   useEffect(() => {
-    if (!userId) return;
+    if (!isLoaded) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     const initializePage = async () => {
       try {
         await fetchInterviews(userId);
@@ -109,7 +121,7 @@ export default function InterviewPage() {
       }
     };
     initializePage();
-  }, [userId]);
+  }, [userId, isLoaded]);
 
   const fetchInterviews = async (createdBy?: string) => {
     try {
@@ -185,6 +197,9 @@ export default function InterviewPage() {
   const saveInterview = async () => {
     if (!currentInterview.name || !currentInterview.subject || !currentInterview.questions?.length) {
       return toast.error("Please fill in all fields and add at least one question.");
+    }
+    if (!userId) {
+      return toast.error("Not authenticated. Please refresh and try again.");
     }
     try {
       const payload = { ...currentInterview, createdBy: userId, questions: currentInterview.questions.map(q => ({ text: q.text, subject: q.subject })) };
@@ -420,7 +435,7 @@ export default function InterviewPage() {
                        </div>
                        <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0">
                           <Button variant="ghost" onClick={() => setIsCreateDialogOpen(false)} className="h-12 flex-1 sm:flex-none px-8 rounded-2xl text-[12px] font-bold uppercase text-gray-500 hover:text-gray-800 hover:bg-gray-100">Cancel</Button>
-                          <Button onClick={saveInterview} className="h-12 flex-1 sm:flex-none px-12 rounded-2xl bg-green-600 hover:bg-green-700 text-white text-[12px] font-black uppercase tracking-[0.2em] shadow-lg shadow-green-200">Create Interview</Button>
+                          <Button onClick={saveInterview} disabled={!isLoaded || !userId} className="h-12 flex-1 sm:flex-none px-12 rounded-2xl bg-green-600 hover:bg-green-700 text-white text-[12px] font-black uppercase tracking-[0.2em] shadow-lg shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed">Create Interview</Button>
                        </div>
                     </div>
                   </DialogContent>

@@ -1,16 +1,24 @@
 import Sidebar from "@/components/sidebar";
 import type { Metadata } from "next";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "KIITAspire | Faculty Dashboard",
   description: "KIITAspire – AI Oral Interview Platform for KIIT University",
 };
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
   return (
     <div className="flex bg-[#f8faf8] text-foreground min-h-screen">
       <Sidebar />
