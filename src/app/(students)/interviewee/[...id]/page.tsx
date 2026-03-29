@@ -19,6 +19,7 @@ interface VideoRTCWidgetProps {
   responseId: string;
   studentName?: string;
   mode: "student" | "teacher";
+  interviewId?: string;
 }
 
 // Dynamically import the entire RealtimeKit video component with ssr:false.
@@ -573,6 +574,7 @@ function IntervieweePageInner() {
           responseId={responseId}
           studentName={studentName}
           mode="student"
+          interviewId={interviewId}
         />
       )}
 

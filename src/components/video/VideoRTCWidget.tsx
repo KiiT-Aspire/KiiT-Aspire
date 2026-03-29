@@ -1,122 +1,249 @@
 "use client";
 
 /**
- * VideoRTCWidget — Cloudflare RealtimeKit video component.
+ * VideoRTCWidget — WebSocket-based video proctoring component.
+ *
+ * Student mode: Captures camera frames and sends them to the WS relay server.
+ *               Shows a small self-view overlay (top-right).
+ *
+ * Teacher mode: Receives student frames from the WS relay server.
+ *               Renders them as a grid of <img> tiles.
  *
  * Loaded ONLY via `dynamic(() => import(...), { ssr: false })`.
- * Never import directly in a server or App Router page.
  */
 
-import { useEffect, useRef } from "react";
-import {
-  useRealtimeKitClient,
-  useRealtimeKitSelector,
-  RealtimeKitProvider,
-} from "@cloudflare/realtimekit-react";
-import type RTKClient from "@cloudflare/realtimekit";
+import { useEffect, useRef, useState, useCallback } from "react";
+
+const WS_URL = process.env.NEXT_PUBLIC_VIDEO_WS_URL || "ws://localhost:8080";
+
+// Frame capture settings (low quality is fine for proctoring)
+const FRAME_WIDTH = 320;
+const FRAME_HEIGHT = 240;
+const FRAME_QUALITY = 0.4; // JPEG quality 0–1
+const FRAME_INTERVAL_MS = 333; // ~3 fps
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface VideoRTCWidgetProps {
   responseId: string;
   studentName?: string;
-  /** "student" = show local camera feed only, "teacher" = show remote feed */
+  /** "student" = capture & show self-view, "teacher" = show remote feeds */
   mode: "student" | "teacher";
-  /** Teacher only — when true, enables mic to talk to this student */
-  isTalking?: boolean;
+  /** interviewId used as the WS room key (teacher mode) */
+  interviewId?: string;
 }
 
-// ─── Local video feed (student sees only their own camera) ────────────────────
+// ─── Student Mode ─────────────────────────────────────────────────────────────
 
-function LocalVideoFeed() {
+function StudentView({
+  responseId,
+  studentName,
+  interviewId,
+}: {
+  responseId: string;
+  studentName: string;
+  interviewId: string;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const videoTrack = useRealtimeKitSelector(
-    (m: RTKClient) => m.self?.videoTrack as MediaStreamTrack | undefined
-  );
-  const videoEnabled = useRealtimeKitSelector(
-    (m: RTKClient) => m.self?.videoEnabled as boolean | undefined
-  );
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (videoTrack && videoEnabled) {
-      el.srcObject = new MediaStream([videoTrack]);
-    } else {
-      el.srcObject = null;
-    }
-  }, [videoTrack, videoEnabled]);
+    let mounted = true;
+
+    const start = async () => {
+      // 1. Get camera (video only — mic is handled by ReactMediaRecorder)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false,
+        });
+        if (!mounted) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (e) {
+        console.error("[VideoWS] Camera access failed:", e);
+        return;
+      }
+
+      // 2. Connect to WS relay server
+      try {
+        const ws = new WebSocket(WS_URL);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          ws.send(
+            JSON.stringify({
+              type: "join",
+              role: "student",
+              interviewId,
+              responseId,
+              studentName,
+            })
+          );
+          console.log("[VideoWS] Student connected to relay");
+
+          // 3. Start sending frames
+          const canvas = canvasRef.current;
+          const video = videoRef.current;
+          if (!canvas || !video) return;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return;
+
+          canvas.width = FRAME_WIDTH;
+          canvas.height = FRAME_HEIGHT;
+
+          intervalRef.current = setInterval(() => {
+            if (
+              ws.readyState !== WebSocket.OPEN ||
+              !video.videoWidth
+            )
+              return;
+            ctx.drawImage(video, 0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+            const dataUrl = canvas.toDataURL("image/jpeg", FRAME_QUALITY);
+            // Strip the data:image/jpeg;base64, prefix
+            const base64 = dataUrl.split(",")[1];
+            if (base64) {
+              ws.send(JSON.stringify({ type: "frame", data: base64 }));
+            }
+          }, FRAME_INTERVAL_MS);
+        };
+
+        ws.onerror = (e) => console.error("[VideoWS] WS error:", e);
+        ws.onclose = () => console.log("[VideoWS] WS closed");
+      } catch (e) {
+        console.error("[VideoWS] WS connection failed:", e);
+      }
+    };
+
+    start();
+
+    return () => {
+      mounted = false;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (wsRef.current) wsRef.current.close();
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+  }, [responseId, studentName, interviewId]);
 
   return (
-    <div className="fixed top-24 right-6 w-[200px] aspect-video bg-black rounded-[12px] overflow-hidden border-2 border-green-500/30 shadow-[0_0_20px_rgba(22,163,74,0.15)] z-50">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className="w-full h-full object-cover scale-x-[-1]"
-      />
-      <div className="absolute bottom-2 left-2 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded-[6px] backdrop-blur font-mono text-[10px] uppercase font-bold text-white tracking-widest border border-white/10">
-        <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-        Live
+    <>
+      {/* Hidden canvas for frame capture */}
+      <canvas ref={canvasRef} className="hidden" />
+      {/* Self-view overlay */}
+      <div className="fixed top-24 right-6 w-[200px] aspect-video bg-black rounded-[12px] overflow-hidden border-2 border-green-500/30 shadow-[0_0_20px_rgba(22,163,74,0.15)] z-50">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full h-full object-cover scale-x-[-1]"
+        />
+        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded-[6px] backdrop-blur font-mono text-[10px] uppercase font-bold text-white tracking-widest border border-white/10">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          Live
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
-// ─── Single remote participant video (for teacher view) ──────────────────────
+// ─── Teacher Mode ─────────────────────────────────────────────────────────────
 
-function RemoteVideoTile({ participantId }: { participantId: string }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+interface StudentFrame {
+  name: string;
+  dataUrl: string; // full data URL for <img>
+}
 
-  const videoTrack = useRealtimeKitSelector((m: RTKClient) => {
-    const p = m.participants?.joined?.toArray?.()?.find(
-      (x: { id: string }) => x.id === participantId
-    );
-    return (p as { videoTrack?: MediaStreamTrack } | undefined)?.videoTrack;
-  });
+function TeacherView({ interviewId }: { interviewId: string }) {
+  const wsRef = useRef<WebSocket | null>(null);
+  const [students, setStudents] = useState<Map<string, StudentFrame>>(
+    new Map()
+  );
 
-  const videoEnabled = useRealtimeKitSelector((m: RTKClient) => {
-    const p = m.participants?.joined?.toArray?.()?.find(
-      (x: { id: string }) => x.id === participantId
-    );
-    return (p as { videoEnabled?: boolean } | undefined)?.videoEnabled ?? false;
-  });
+  const handleMessage = useCallback((event: MessageEvent) => {
+    try {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === "student-joined") {
+        setStudents((prev) => {
+          const next = new Map(prev);
+          if (!next.has(msg.responseId)) {
+            next.set(msg.responseId, { name: msg.studentName, dataUrl: "" });
+          }
+          return next;
+        });
+      } else if (msg.type === "student-left") {
+        setStudents((prev) => {
+          const next = new Map(prev);
+          next.delete(msg.responseId);
+          return next;
+        });
+      } else if (msg.type === "frame") {
+        setStudents((prev) => {
+          const next = new Map(prev);
+          const existing = next.get(msg.responseId);
+          next.set(msg.responseId, {
+            name: existing?.name || "Student",
+            dataUrl: `data:image/jpeg;base64,${msg.data}`,
+          });
+          return next;
+        });
+      }
+    } catch {
+      // Ignore malformed messages
+    }
+  }, []);
 
   useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (videoTrack && videoEnabled) {
-      el.srcObject = new MediaStream([videoTrack]);
-    } else {
-      el.srcObject = null;
-    }
-  }, [videoTrack, videoEnabled]);
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
 
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      className="w-full h-full object-cover"
-    />
-  );
-}
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: "join",
+          role: "teacher",
+          interviewId,
+        })
+      );
+      console.log("[VideoWS] Teacher connected to relay");
+    };
 
-// ─── Teacher view — shows all remote participant feeds ───────────────────────
+    ws.onmessage = handleMessage;
+    ws.onerror = (e) => console.error("[VideoWS] WS error:", e);
+    ws.onclose = () => console.log("[VideoWS] WS closed");
 
-function TeacherView() {
-  const participantIds = useRealtimeKitSelector((m: RTKClient) =>
-    m.participants?.joined?.toArray?.()?.map((p: { id: string }) => p.id) ?? []
-  );
+    return () => {
+      ws.close();
+    };
+  }, [interviewId, handleMessage]);
 
-  if (participantIds.length === 0) {
+  if (students.size === 0) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-5 bg-[#080808] text-zinc-600">
         <div className="flex flex-col items-center gap-3">
           <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.277A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M15 10l4.553-2.277A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"
+              />
             </svg>
           </div>
           <p className="text-[13px] font-medium text-zinc-500">
@@ -129,146 +256,40 @@ function TeacherView() {
 
   return (
     <>
-      {participantIds.map((id: string) => (
-        <RemoteVideoTile key={id} participantId={id} />
+      {Array.from(students.entries()).map(([rid, info]) => (
+        <div key={rid} className="relative w-full h-full">
+          {info.dataUrl ? (
+            <img
+              src={info.dataUrl}
+              alt={info.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+              <p className="text-zinc-500 text-xs">Connecting…</p>
+            </div>
+          )}
+        </div>
       ))}
     </>
   );
 }
 
-// ─── Remote audio feed (student hears faculty when they speak) ───────────────
-
-function RemoteAudioFeed() {
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  const remoteAudioTrack = useRealtimeKitSelector((m: RTKClient) => {
-    const participants = m.participants?.joined?.toArray?.() ?? [];
-    for (const p of participants) {
-      const track = (p as { audioTrack?: MediaStreamTrack }).audioTrack;
-      const enabled = (p as { audioEnabled?: boolean }).audioEnabled;
-      if (track && enabled) return track;
-    }
-    return undefined;
-  });
-
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    if (remoteAudioTrack) {
-      el.srcObject = new MediaStream([remoteAudioTrack]);
-    } else {
-      el.srcObject = null;
-    }
-  }, [remoteAudioTrack]);
-
-  return <audio ref={audioRef} autoPlay />;
-}
-
 // ─── Root component ──────────────────────────────────────────────────────────
 
 export default function VideoRTCWidget(props: VideoRTCWidgetProps) {
-  const [meeting, initMeeting] = useRealtimeKitClient();
+  // Derive interviewId: teacher passes it directly, student extracts from responseId context
+  const interviewId = props.interviewId || props.responseId;
 
-  // 1. Fetch token → init client → join room
-  useEffect(() => {
-    let mounted = true;
+  if (props.mode === "student") {
+    return (
+      <StudentView
+        responseId={props.responseId}
+        studentName={props.studentName || "Student"}
+        interviewId={interviewId}
+      />
+    );
+  }
 
-    (async () => {
-      try {
-        const res = await fetch("/api/cloudflarerealtime/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            meetingId: props.responseId,
-            participantName:
-              props.studentName ??
-              (props.mode === "teacher" ? "Proctor" : "Student"),
-          }),
-        });
-        const data = await res.json();
-
-        if (!data.success || !data.token || !mounted) {
-          if (!data.success)
-            console.warn("[VideoRTC] Token error:", data.message ?? data.error);
-          return;
-        }
-
-        const m = await initMeeting({
-          authToken: data.token,
-          defaults: {
-            video: props.mode === "student",
-            audio: false,
-          },
-        });
-        if (!m || !mounted) return;
-
-        await m.join();
-        console.log("[VideoRTC] Room joined, mode:", props.mode);
-      } catch (e) {
-        console.error("[VideoRTC] init error:", e);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.responseId]);
-
-  // 2. Ensure local camera stays enabled for student after join
-  useEffect(() => {
-    if (props.mode !== "student" || !meeting) return;
-
-    const self = meeting.self;
-    if (!self) return;
-
-    const enableCam = () => {
-      if (!self.videoEnabled) {
-        self.enableVideo().catch((e: unknown) =>
-          console.error("[VideoRTC] enableVideo:", e)
-        );
-      }
-    };
-
-    if (self.roomState === "joined") {
-      enableCam();
-    }
-
-    // Also handle late / re-joins
-    self.on("roomJoined", enableCam);
-    return () => {
-      self.removeListener("roomJoined", enableCam);
-    };
-  }, [meeting, props.mode]);
-
-  // 3. Toggle teacher mic based on isTalking prop
-  useEffect(() => {
-    if (props.mode !== "teacher" || !meeting) return;
-
-    const self = meeting.self;
-    if (!self || self.roomState !== "joined") return;
-
-    if (props.isTalking) {
-      self.enableAudio().catch((e: unknown) =>
-        console.error("[VideoRTC] enableAudio:", e)
-      );
-    } else {
-      self.disableAudio().catch((e: unknown) =>
-        console.error("[VideoRTC] disableAudio:", e)
-      );
-    }
-  }, [meeting, props.mode, props.isTalking]);
-
-  return (
-    <RealtimeKitProvider value={meeting}>
-      {props.mode === "student" ? (
-        <>
-          <LocalVideoFeed />
-          <RemoteAudioFeed />
-        </>
-      ) : (
-        <TeacherView />
-      )}
-    </RealtimeKitProvider>
-  );
+  return <TeacherView interviewId={interviewId} />;
 }

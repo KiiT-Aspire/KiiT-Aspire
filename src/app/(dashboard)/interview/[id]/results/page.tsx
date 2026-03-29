@@ -11,7 +11,7 @@ import {
   Loader2, ArrowLeft, User, Calendar, Award, Clock,
   CheckCircle2, XCircle, AlertCircle, Download, Eye,
   TrendingUp, BarChart3, Users, Activity, ChevronLeft,
-  ChevronRight, AudioWaveform, Filter, Trash2, Mic, MicOff
+  ChevronRight, AudioWaveform, Filter, Trash2
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
@@ -20,7 +20,7 @@ interface VideoRTCWidgetProps {
   responseId: string;
   studentName?: string;
   mode: "student" | "teacher";
-  isTalking?: boolean;
+  interviewId?: string;
 }
 
 const VideoRTCWidget = dynamic(
@@ -105,7 +105,6 @@ export default function ResultsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isMounted, setIsMounted] = useState(false);
-  const [talkingTo, setTalkingTo] = useState<string | null>(null);
   const limit = 20;
 
   useEffect(() => {
@@ -294,22 +293,11 @@ export default function ResultsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {sorted.filter(r => r.status === "in_progress").map(r => (
                 <div key={r.id} className="relative aspect-video rounded-xl overflow-hidden bg-[#050505] border border-white/[0.05] hover:border-white/10 transition-colors shadow-lg">
-                  <VideoRTCWidget responseId={r.id} studentName={r.studentName} mode="teacher" isTalking={talkingTo === r.id} />
+                  <VideoRTCWidget responseId={r.id} studentName={r.studentName} mode="teacher" interviewId={interviewId} />
                   <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded backdrop-blur z-10">
                     <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
                     <span className="text-[10px] font-bold text-white uppercase tracking-widest truncate max-w-[120px]">{r.studentName || "Candidate"}</span>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setTalkingTo(prev => prev === r.id ? null : r.id); }}
-                    className={`absolute bottom-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                      talkingTo === r.id
-                        ? "bg-indigo-500 text-white shadow-[0_0_14px_rgba(99,102,241,0.5)] animate-pulse"
-                        : "bg-black/60 text-zinc-400 hover:text-white hover:bg-black/80 backdrop-blur"
-                    }`}
-                    title={talkingTo === r.id ? `Speaking to ${r.studentName}` : `Talk to ${r.studentName}`}
-                  >
-                    {talkingTo === r.id ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-                  </button>
                 </div>
               ))}
             </div>
