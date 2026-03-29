@@ -50,7 +50,8 @@ wss.on("connection", (ws) => {
 
   ws.on("message", (raw) => {
     try {
-      const msg = JSON.parse(raw);
+      // ws v8 delivers Buffers — must convert to string before parsing
+      const msg = JSON.parse(typeof raw === "string" ? raw : raw.toString());
 
       // ── JOIN ────────────────────────────────────────────────────────────
       if (msg.type === "join") {
@@ -111,6 +112,24 @@ wss.on("connection", (ws) => {
             t.send(payload);
           }
         }
+        return;
+      }
+
+      // ── TEACHER-AUDIO (teacher → specific student, private) ────────────
+      if (msg.type === "teacher-audio" && clientRole === "teacher" && clientRoom) {
+        const { targetResponseId, data } = msg;
+        if (!targetResponseId || !data) return;
+
+        const room = rooms.get(clientRoom);
+        if (!room) return;
+
+        const student = room.students.get(targetResponseId);
+        if (!student || student.ws.readyState !== 1) return;
+
+        student.ws.send(JSON.stringify({
+          type: "teacher-audio",
+          data,
+        }));
         return;
       }
     } catch {

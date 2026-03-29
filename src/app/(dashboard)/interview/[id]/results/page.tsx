@@ -14,17 +14,9 @@ import {
   ChevronRight, AudioWaveform, Filter, Trash2
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import type { ComponentType } from "react";
 
-interface VideoRTCWidgetProps {
-  responseId: string;
-  studentName?: string;
-  mode: "student" | "teacher";
-  interviewId?: string;
-}
-
-const VideoRTCWidget = dynamic(
-  () => import("@/components/video/VideoRTCWidget") as Promise<{ default: ComponentType<VideoRTCWidgetProps> }>,
+const TeacherMonitor = dynamic(
+  () => import("@/components/video/VideoRTCWidget").then((mod) => ({ default: mod.TeacherMonitor })),
   { ssr: false, loading: () => null }
 );
 
@@ -281,26 +273,16 @@ export default function ResultsPage() {
           </motion.div>
         )}
 
-        {/* Live Video Feeds Area */}
-        {isMounted && sorted.filter(r => r.status === "in_progress").length > 0 && (
+        {/* Live Video Monitor — single WS, click to select, push-to-talk */}
+        {isMounted && (
           <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="pt-2">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_12px_rgba(239,68,68,0.5)]" />
-                <h2 className="text-[14px] font-bold text-white tracking-widest uppercase flex items-center gap-2">Live Monitor <span className="bg-red-500/20 text-red-500 text-[10px] px-2 py-0.5 rounded-full">{sorted.filter(r => r.status === "in_progress").length} Active</span></h2>
+                <h2 className="text-[14px] font-bold text-white tracking-widest uppercase flex items-center gap-2">Live Monitor</h2>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {sorted.filter(r => r.status === "in_progress").map(r => (
-                <div key={r.id} className="relative aspect-video rounded-xl overflow-hidden bg-[#050505] border border-white/[0.05] hover:border-white/10 transition-colors shadow-lg">
-                  <VideoRTCWidget responseId={r.id} studentName={r.studentName} mode="teacher" interviewId={interviewId} />
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded backdrop-blur z-10">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
-                    <span className="text-[10px] font-bold text-white uppercase tracking-widest truncate max-w-[120px]">{r.studentName || "Candidate"}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <TeacherMonitor interviewId={interviewId} />
           </motion.div>
         )}
 
