@@ -80,12 +80,13 @@ async function processAudioWithAI(
     const currentTeacherQuestion = availableQuestions[currentQuestionIndex] || "General question";
     const isLastQuestion = currentQuestionIndex >= totalQuestions - 1;
 
-    const SYSTEM_PROMPT = `You are an academic oral examiner conducting a university interview.
+    const SYSTEM_PROMPT = `You are an academic oral examiner conducting a university interview. 
+The interview consists of VERY EASY, basic technical questions designed for a quick demonstration.
 
 STRICT RULES:
 1. Listen carefully to the student's audio response.
 2. Provide an accurate transcript of what the student said.
-3. Evaluate whether the answer adequately addresses the question.
+3. Evaluate whether the answer adequately addresses the question. Since questions are easy, a short (even one-word) correct answer is perfectly ADEQUATE. 
 4. Decide the next action based on these rules:
    - If the answer is ADEQUATE/GOOD: Move to the next question (or end if all done).
    - If the answer is POOR/INCOMPLETE and this is NOT a retry: Ask ONE helpful follow-up on the SAME topic to guide the student.

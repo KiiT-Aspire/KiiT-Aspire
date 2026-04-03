@@ -60,11 +60,18 @@ const staggerContainer: Variants = {
 };
 
 const subjectThemes: Record<string, { bg: string; text: string; ring: string }> = {
-  "Software Engineering": { bg: "bg-indigo-100", text: "text-indigo-700", ring: "border-indigo-200" },
-  "Cloud Computing": { bg: "bg-cyan-100", text: "text-cyan-700", ring: "border-cyan-200" },
-  "Data Science": { bg: "bg-violet-100", text: "text-violet-700", ring: "border-violet-200" },
+  "Software Engineering": { bg: "bg-blue-100", text: "text-blue-700", ring: "border-blue-200" },
+  "Cloud Computing": { bg: "bg-sky-100", text: "text-sky-700", ring: "border-sky-200" },
+  "Data Science": { bg: "bg-purple-100", text: "text-purple-700", ring: "border-purple-200" },
   "System Design": { bg: "bg-amber-100", text: "text-amber-700", ring: "border-amber-200" },
   "Frontend Development": { bg: "bg-pink-100", text: "text-pink-700", ring: "border-pink-200" },
+  "Database Systems": { bg: "bg-green-100", text: "text-green-700", ring: "border-green-200" },
+  "Operating Systems": { bg: "bg-red-100", text: "text-red-700", ring: "border-red-200" },
+  "Computer Networks": { bg: "bg-orange-100", text: "text-orange-700", ring: "border-orange-200" },
+  "Cybersecurity": { bg: "bg-slate-100", text: "text-slate-700", ring: "border-slate-200" },
+  "Artificial Intelligence": { bg: "bg-emerald-100", text: "text-emerald-700", ring: "border-emerald-200" },
+  "Data Structures": { bg: "bg-indigo-100", text: "text-indigo-700", ring: "border-indigo-200" },
+  "Web Development": { bg: "bg-cyan-100", text: "text-cyan-700", ring: "border-cyan-200" },
 };
 
 export default function InterviewPage() {
@@ -100,10 +107,17 @@ export default function InterviewPage() {
 
   const subjects = [
     "Software Engineering",
+    "Data Structures",
+    "Operating Systems",
+    "Database Systems",
+    "Computer Networks",
+    "Artificial Intelligence",
+    "Cybersecurity",
     "Cloud Computing",
-    "Data Science",
     "System Design",
     "Frontend Development",
+    "Web Development",
+    "Data Science",
   ];
 
   useEffect(() => {
@@ -301,7 +315,7 @@ export default function InterviewPage() {
                     </motion.button>
                   </DialogTrigger>
 
-                  <DialogContent className="max-w-4xl w-[95vw] max-h-[92vh] overflow-y-auto bg-white border border-green-200 shadow-2xl rounded-[32px] p-0 flex flex-col">
+                  <DialogContent className="max-w-6xl w-[95vw] max-h-[92vh] overflow-y-auto bg-white border border-green-200 shadow-2xl rounded-[32px] p-0 flex flex-col">
                     <div className="p-6 sm:p-8 border-b border-green-100 bg-green-50">
                        <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-[20px] bg-green-100 flex items-center justify-center text-green-700 border border-green-200 shrink-0">
@@ -528,7 +542,7 @@ export default function InterviewPage() {
       <AnimatePresence>
          {isViewDialogOpen && (
            <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-             <DialogContent className="max-w-[550px] w-[95vw] bg-white border border-green-200 rounded-[40px] p-0 shadow-2xl overflow-hidden">
+             <DialogContent className="max-w-3xl w-[95vw] bg-white border border-green-200 rounded-[40px] p-0 shadow-2xl overflow-hidden">
                {selectedQuestionsView(selectedInterview, deleteInterview, copyInterviewLink, router, copiedId)}
              </DialogContent>
            </Dialog>
@@ -544,63 +558,60 @@ function selectedQuestionsView(selectedInterview: Interview | null, deleteInterv
    
    return (
       <div className="flex flex-col h-full max-h-[90vh]">
-         {/* Top Header */}
-         <div className="p-6 sm:p-10 pb-6 border-b border-green-100 bg-green-50 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-green-200/30 blur-[80px] opacity-60 rounded-full" />
+         {/* Compact Header */}
+         <div className="pl-6 pr-14 py-4 border-b border-green-100 bg-green-50 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-200/30 blur-[60px] opacity-60 rounded-full" />
             <div className="relative z-10">
-               <div className="flex items-center justify-between mb-6">
-                  <div className={`px-4 py-1.5 rounded-xl border ${theme.ring} ${theme.bg} ${theme.text} text-[10px] font-bold uppercase tracking-widest`}>
-                     {selectedInterview.subject}
+               <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                     <div className={`px-3 py-1 rounded-lg border ${theme.ring} ${theme.bg} ${theme.text} text-[10px] font-bold uppercase tracking-widest`}>
+                        {selectedInterview.subject}
+                     </div>
+                     <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-400"><Clock className="w-3.5 h-3.5 text-green-500" /> {selectedInterview.timeLimit}m</span>
+                     <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-400"><Users className="w-3.5 h-3.5 text-green-500" /> {selectedInterview.candidatesCount} applied</span>
                   </div>
-                  <button onClick={() => deleteInterview(selectedInterview.id)} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-red-50 text-gray-400 hover:text-red-600 hover:bg-red-100 transition-all border border-red-100">
-                     <Trash2 className="w-5 h-5" />
+                  <button onClick={() => deleteInterview(selectedInterview.id)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 text-gray-400 hover:text-red-600 hover:bg-red-100 transition-all border border-red-100">
+                     <Trash2 className="w-4 h-4" />
                   </button>
                </div>
-               <h2 className="text-[24px] sm:text-[30px] font-black text-gray-900 tracking-tight leading-[1.1] mb-4 break-words">{selectedInterview.name}</h2>
-               <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-[12px] font-semibold text-gray-500">
-                  <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-green-500" /> {selectedInterview.timeLimit}m limit</span>
-                  <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-gray-300" />
-                  <span className="flex items-center gap-1.5"><Users className="w-4 h-4 text-green-500" /> {selectedInterview.candidatesCount} applied</span>
-               </div>
+               <h2 className="text-[20px] sm:text-[24px] font-black text-gray-900 tracking-tight leading-[1.1] break-words">{selectedInterview.name}</h2>
             </div>
          </div>
 
-         {/* Content Area */}
-         <div className="p-6 sm:p-10 pb-4 flex-1 overflow-y-auto space-y-8">
-            <div className="space-y-4">
-               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Interview Questions</h3>
-               <div className="space-y-3">
-                  {selectedInterview.questions?.map((q, i) => (
-                     <div key={q.id || i} className="p-5 sm:p-6 rounded-[20px] bg-gray-50 border border-green-100 hover:border-green-200 transition-all">
-                        <div className="flex items-start gap-4">
-                           <span className="text-[11px] font-black text-green-600 uppercase mt-1 shrink-0">#{i+1}</span>
-                           <p className="text-[14px] sm:text-[15px] font-medium text-gray-800 leading-relaxed">{q.text}</p>
-                        </div>
+         {/* Content Area — questions list */}
+         <div className="px-6 py-4 flex-1 overflow-y-auto">
+            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-3">Interview Questions</h3>
+            <div className="space-y-2">
+               {selectedInterview.questions?.map((q, i) => (
+                  <div key={q.id || i} className="px-4 py-3 rounded-xl bg-gray-50 border border-green-100 hover:border-green-200 transition-all">
+                     <div className="flex items-start gap-3">
+                        <span className="text-[10px] font-black text-green-600 uppercase mt-0.5 shrink-0">#{i+1}</span>
+                        <p className="text-[13px] sm:text-[14px] font-medium text-gray-800 leading-snug">{q.text}</p>
                      </div>
-                  ))}
-                  {!selectedInterview.questions?.length && (
-                    <div className="py-16 text-center border border-dashed border-green-200 rounded-[24px] bg-green-50/50">
-                       <FolderDot className="w-10 h-10 mx-auto mb-4 text-green-300" />
-                       <p className="text-[13px] font-semibold text-gray-400">No questions added</p>
-                    </div>
-                  )}
-               </div>
+                  </div>
+               ))}
+               {!selectedInterview.questions?.length && (
+                 <div className="py-12 text-center border border-dashed border-green-200 rounded-xl bg-green-50/50">
+                    <FolderDot className="w-8 h-8 mx-auto mb-3 text-green-300" />
+                    <p className="text-[13px] font-semibold text-gray-400">No questions added</p>
+                 </div>
+               )}
             </div>
          </div>
 
-         {/* Action Bar */}
-         <div className="p-6 sm:p-10 pt-4 flex flex-col gap-4 border-t border-green-100 bg-white">
+         {/* Compact Action Bar */}
+         <div className="px-6 py-3 flex items-center gap-3 border-t border-green-100 bg-white">
             <Button 
                onClick={() => copyInterviewLink(selectedInterview.id)} 
-               className={`h-12 w-full rounded-2xl text-[12px] font-bold uppercase tracking-widest transition-all ${
+               className={`h-10 flex-1 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${
                  copiedId === selectedInterview.id 
                    ? 'bg-green-100 text-green-700 border-green-300 border' 
                    : 'bg-gray-100 border border-gray-200 text-gray-700 hover:bg-green-100 hover:text-green-700 hover:border-green-300'
                }`}
             >
-               {copiedId === selectedInterview.id ? <><CheckCircle2 className="w-4 h-4 mr-2" /> Link Copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy Student Link</>}
+               {copiedId === selectedInterview.id ? <><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5 mr-1.5" /> Copy Link</>}
             </Button>
-            <Button onClick={() => router.push(`/interview/${selectedInterview.id}/results`)} className="h-14 w-full rounded-[24px] bg-green-600 hover:bg-green-700 text-white text-[13px] font-black uppercase tracking-[0.2em] shadow-lg shadow-green-200 transition-all">
+            <Button onClick={() => router.push(`/interview/${selectedInterview.id}/results`)} className="h-10 flex-1 rounded-xl bg-green-600 hover:bg-green-700 text-white text-[11px] font-black uppercase tracking-[0.15em] shadow-md shadow-green-200 transition-all">
                View Results
             </Button>
          </div>

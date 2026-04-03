@@ -13,10 +13,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Subject is required" }, { status: 400 });
     }
 
-    const prompt = `Generate ${count} technical interview questions for the subject: "${subject}". 
+    const prompt = `Generate ${count} EXTREMELY EASY technical interview questions for the subject: "${subject}". 
+    The questions should be very basic, suitable for a beginner, and designed to have VERY SHORT answers (ideally one word or a short phrase).
+    
     Return ONLY a JSON array of objects with the following structure:
     [
-      { "id": "q1", "text": "Question text here", "subject": "${subject}" }
+      { "id": "q1", "text": "Question text here (e.g., 'What does HTML stand for?')", "subject": "${subject}" }
     ]
     Make sure each id is unique (e.g. q1, q2). Do not include any other text or markdown block wrappers. Respond straight with the valid JSON.`;
 
