@@ -409,7 +409,7 @@ function IntervieweePageInner() {
             <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-[0_0_20px_rgba(22,163,74,0.35)]">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
-            <span className="text-[18px] font-bold text-gray-900">KIIT<span className="text-green-600">Aspire</span></span>
+            <span className="text-[18px] font-bold text-gray-900">Echo<span className="text-green-600">Grade</span></span>
           </motion.div>
 
           {/* Card */}

@@ -9,6 +9,7 @@ import {
   AudioWaveform, MessagesSquare, Plus as PlusIcon, Menu, X,
   BookOpen, ClipboardList, GraduationCap, FileCheck, CheckCircle
 } from "lucide-react";
+import { useUser, UserButton } from "@clerk/nextjs";
 
 // Animation variants
 const fadeUp: Variants = {
@@ -84,6 +85,7 @@ function FeatureCard({
 }
 
 export default function Home() {
+  const { isSignedIn, isLoaded } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
@@ -162,7 +164,7 @@ export default function Home() {
               <GraduationCap className="h-4 w-4 text-white" />
             </div>
             <span className="text-[17px] font-bold tracking-tight text-gray-900">
-              KIIT<span className="text-green-600">Aspire</span>
+              Echo<span className="text-green-600">Grade</span>
             </span>
           </Link>
 
@@ -181,19 +183,30 @@ export default function Home() {
 
           {/* CTA */}
           <div className="flex items-center gap-3">
-            <Link href="/interview" className="hidden sm:block text-[13px] font-medium text-gray-500 hover:text-green-700 transition-colors">
-              Faculty Login
-            </Link>
-            <Link href="/interview">
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className="h-9 px-4 rounded-[10px] bg-gradient-to-r from-green-500 to-emerald-600 text-[13px] font-semibold text-white shadow-[0_0_20px_rgba(22,163,74,0.3)] hover:shadow-[0_0_30px_rgba(22,163,74,0.45)] transition-all duration-200 flex items-center gap-1.5"
-              >
-                Set Up Interview
-                <ChevronRight className="w-3.5 h-3.5" />
-              </motion.button>
-            </Link>
+            {!isSignedIn && isLoaded && (
+              <Link href="/interview" className="hidden sm:block text-[13px] font-medium text-gray-500 hover:text-green-700 transition-colors">
+                Faculty Login
+              </Link>
+            )}
+            
+            {isSignedIn && isLoaded && (
+              <div className="flex items-center gap-4">
+                <Link href="/interview">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="h-9 px-4 rounded-[10px] bg-gradient-to-r from-green-500 to-emerald-600 text-[13px] font-semibold text-white shadow-[0_0_20px_rgba(22,163,74,0.3)] hover:shadow-[0_0_30px_rgba(22,163,74,0.45)] transition-all duration-200 flex items-center gap-1.5"
+                  >
+                    Set Up Interview
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </motion.button>
+                </Link>
+                <div className="hidden sm:block">
+                  <UserButton appearance={{ elements: { avatarBox: "w-8 h-8 rounded-[10px] border border-green-100 shadow-sm" } }} />
+                </div>
+              </div>
+            )}
+            
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -224,12 +237,16 @@ export default function Home() {
                 </a>
               ))}
               <div className="pt-4 flex flex-col gap-4">
-                <Link href="/interview" onClick={() => setIsMobileMenuOpen(false)} className="text-[17px] font-semibold text-green-700">
-                  Set Up Interview
-                </Link>
-                <Link href="/interview" onClick={() => setIsMobileMenuOpen(false)} className="text-[17px] font-semibold text-gray-500">
-                  Faculty Login
-                </Link>
+                {isSignedIn && isLoaded ? (
+                  <Link href="/interview" onClick={() => setIsMobileMenuOpen(false)} className="text-[17px] font-semibold text-green-700 flex items-center justify-between">
+                    Set Up Interview
+                    <ChevronRight className="w-5 h-5" />
+                  </Link>
+                ) : (
+                  <Link href="/interview" onClick={() => setIsMobileMenuOpen(false)} className="text-[17px] font-semibold text-gray-500">
+                    Faculty Login
+                  </Link>
+                )}
               </div>
             </motion.div>
           )}
@@ -293,7 +310,7 @@ export default function Home() {
                 whileTap={{ scale: 0.97 }}
                 className="group relative h-[52px] px-8 rounded-[14px] bg-gradient-to-r from-green-500 to-emerald-600 text-[15px] font-semibold text-white shadow-[0_0_30px_rgba(22,163,74,0.3)] transition-all duration-200 flex items-center gap-2.5 overflow-hidden"
               >
-                <span className="relative z-10">Faculty Dashboard</span>
+                <span className="relative z-10">{isSignedIn ? "Go to Dashboard" : "Faculty Dashboard"}</span>
                 <motion.span
                   className="relative z-10"
                   animate={{ x: [0, 4, 0] }}
@@ -304,128 +321,10 @@ export default function Home() {
                 <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500 skew-x-12" />
               </motion.button>
             </Link>
-
-            <Link href="/interviewee">
-              <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.97 }}
-                className="h-[52px] px-8 rounded-[14px] border border-green-300 bg-white text-[15px] font-medium text-green-700 hover:bg-green-50 hover:border-green-400 transition-all duration-200 flex items-center gap-2.5"
-              >
-                <Mic className="w-4 h-4 text-green-500" />
-                Try as Student
-              </motion.button>
-            </Link>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* DASHBOARD PREVIEW */}
-      <motion.section
-        initial={{ opacity: 0, y: 60 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 max-w-6xl mx-auto px-6 pb-32"
-      >
-        <div className="relative">
-          {/* Glow behind card */}
-          <div className="absolute inset-x-10 top-10 bottom-0 bg-green-500/[0.07] blur-[60px] rounded-full" />
-
-          {/* Card */}
-          <div className="relative rounded-[24px] border border-green-200 bg-white overflow-hidden shadow-[0_20px_80px_rgba(22,163,74,0.1)]">
-            {/* Browser bar */}
-            <div className="flex items-center gap-4 px-5 py-3.5 border-b border-green-100 bg-green-50/50">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-400/70" />
-                <div className="w-3 h-3 rounded-full bg-amber-400/70" />
-                <div className="w-3 h-3 rounded-full bg-green-400/70" />
-              </div>
-              <div className="flex-1 flex justify-center">
-                <div className="h-7 w-72 bg-white border border-green-200 rounded-[8px] flex items-center px-3 gap-2">
-                  <div className="w-3 h-3 rounded-full border border-green-300" />
-                  <div className="text-[11px] text-gray-400">kiit-aspire.edu/dashboard</div>
-                </div>
-              </div>
-              <div className="w-24 flex justify-end gap-1.5">
-                {[1,2,3].map(i => <div key={i} className="w-5 h-5 rounded bg-green-100" />)}
-              </div>
-            </div>
-
-            {/* App content */}
-            <div className="flex h-[480px]">
-              {/* Sidebar */}
-              <div className="w-[200px] border-r border-green-100 p-4 flex flex-col gap-3 bg-green-50/30">
-                <div className="flex items-center gap-2.5 px-2 py-1.5 mb-3">
-                  <div className="w-6 h-6 rounded-[6px] bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                    <GraduationCap className="w-3 h-3 text-white" />
-                  </div>
-                  <span className="text-[13px] font-bold text-gray-800">KIITAspire</span>
-                </div>
-                {[
-                  { label: "Dashboard", active: false },
-                  { label: "Interviews", active: true },
-                  { label: "Results", active: false },
-                  { label: "Settings", active: false },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className={`px-3 py-2 rounded-[8px] text-[12px] font-medium ${
-                      item.active
-                        ? "bg-green-500/15 text-green-700 border border-green-500/20"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {item.label}
-                  </div>
-                ))}
-              </div>
-
-              {/* Main content */}
-              <div className="flex-1 p-6 overflow-hidden bg-white">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <div className="h-5 w-40 bg-gray-200 rounded-[6px] mb-1.5" />
-                    <div className="h-3 w-56 bg-gray-100 rounded-[4px]" />
-                  </div>
-                  <div className="h-8 w-36 bg-gradient-to-r from-green-500/30 to-emerald-600/30 rounded-[8px]" />
-                </div>
-
-                {/* Stats row */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  {[
-                    { label: "Total Interviews", value: "12", color: "from-green-100 to-emerald-100" },
-                    { label: "Avg Score", value: "78%", color: "from-teal-100 to-cyan-100" },
-                    { label: "Students", value: "47", color: "from-emerald-100 to-green-100" },
-                  ].map((stat, i) => (
-                    <div key={i} className={`rounded-[12px] border border-green-100 bg-gradient-to-br ${stat.color} p-4`}>
-                      <div className="h-3 w-20 bg-green-200/60 rounded mb-2.5" />
-                      <div className="h-6 w-14 bg-green-700/20 rounded-[4px]" />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Interview cards */}
-                <div className="space-y-2.5">
-                  {[
-                    { w: "w-32", c: "bg-green-400/60" },
-                    { w: "w-44", c: "bg-emerald-400/60" },
-                    { w: "w-36", c: "bg-teal-400/60" },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-4 p-3.5 rounded-[10px] border border-green-100 bg-green-50/40 hover:bg-green-50 transition-colors">
-                      <div className={`w-8 h-8 rounded-full ${item.c} opacity-50 shrink-0`} />
-                      <div className="flex-1 flex items-center gap-4">
-                        <div className={`h-3 ${item.w} bg-gray-200 rounded`} />
-                        <div className="h-3 w-20 bg-gray-100 rounded" />
-                      </div>
-                      <div className="h-6 w-16 rounded-[6px] bg-green-100 border border-green-200" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.section>
 
       {/* FEATURES */}
       <section id="features" className="relative z-10 max-w-7xl mx-auto px-6 py-32">
@@ -441,7 +340,7 @@ export default function Home() {
             Platform Capabilities
           </motion.div>
           <motion.h2 variants={fadeUp} className="text-[2.5rem] sm:text-[3.5rem] font-bold tracking-[-0.04em] text-gray-900 mb-5">
-            What KIITAspire
+            What EchoGrade
             <br />
             <span
               style={{
@@ -691,18 +590,8 @@ export default function Home() {
                   whileTap={{ scale: 0.97 }}
                   className="h-[52px] px-10 rounded-[14px] bg-gradient-to-r from-green-500 to-emerald-600 text-[15px] font-semibold text-white shadow-[0_0_30px_rgba(22,163,74,0.3)] transition-all duration-200 flex items-center gap-2"
                 >
-                  Set Up an Interview
+                  {isSignedIn ? "Go to Dashboard" : "Set Up an Interview"}
                   <ArrowRight className="w-4 h-4" />
-                </motion.button>
-              </Link>
-              <Link href="/interviewee">
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="h-[52px] px-8 rounded-[14px] border border-green-300 bg-white text-[15px] font-medium text-green-700 hover:bg-green-50 transition-all flex items-center gap-2"
-                >
-                  <Play className="w-4 h-4" />
-                  Try as Student
                 </motion.button>
               </Link>
             </motion.div>
@@ -718,21 +607,14 @@ export default function Home() {
               <GraduationCap className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="text-[15px] font-bold text-gray-700">
-              KIIT<span className="text-green-600">Aspire</span>
+              Echo<span className="text-green-600">Grade</span>
             </span>
           </div>
           <p className="text-gray-400 text-[13px]">
-            © 2025 KIITAspire — AI Interview Platform for KIIT University.
+            © 2025 EchoGrade — AI Interview Platform for KIIT University.
           </p>
-          <div className="flex items-center gap-5">
-            {["Privacy", "Terms", "Support"].map((link) => (
-              <a key={link} href="#" className="text-[13px] text-gray-400 hover:text-green-700 transition-colors">
-                {link}
-              </a>
-            ))}
-          </div>
         </div>
       </footer>
-    </div>
+</div>
   );
 }

@@ -45,7 +45,7 @@ export default function Sidebar() {
                 transition={{ duration: 0.2 }}
                 className="text-[15px] font-bold text-gray-800 whitespace-nowrap overflow-hidden"
               >
-                KIIT<span className="text-green-600">Aspire</span>
+                Echo<span className="text-green-600">Grade</span>
               </motion.span>
             )}
           </AnimatePresence>

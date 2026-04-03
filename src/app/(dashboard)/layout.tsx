@@ -4,8 +4,8 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "KIITAspire | Faculty Dashboard",
-  description: "KIITAspire – AI Oral Interview Platform for KIIT University",
+  title: "EchoGrade | Faculty Dashboard",
+  description: "EchoGrade – AI Oral Interview Platform for KIIT University",
 };
 
 export default async function DashboardLayout({

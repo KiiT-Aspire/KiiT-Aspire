@@ -121,7 +121,7 @@ Evaluate the student's audio response and decide the next step according to the 
     ];
 
     const response = await genAI.models.generateContent({
-      model: "gemini-2.5-flash-preview-04-17",
+      model: "gemini-flash-lite-latest",
       config: {
         thinkingConfig: {
           thinkingLevel: ThinkingLevel.LOW,
