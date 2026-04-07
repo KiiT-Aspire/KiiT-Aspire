@@ -41,14 +41,22 @@ export async function POST(req: Request) {
     let cfMeetingId: string | null = null;
 
     // Search existing meetings by title (we use our responseId as the title)
+    // IMPORTANT: Cloudflare API ignores ?title= and returns all meetings. We MUST 
+    // fetch a larger limit (e.g. limit=100) and manually search for the exact match.
     const listRes = await fetch(
-      `${CF_BASE}/accounts/${accountId}/realtime/kit/${appId}/meetings?title=${encodeURIComponent(responseId)}&limit=1`,
+      `${CF_BASE}/accounts/${accountId}/realtime/kit/${appId}/meetings?limit=100`,
       { headers }
     );
     const listData = await listRes.json();
 
     if (listData.success && Array.isArray(listData.data) && listData.data.length > 0) {
-      cfMeetingId = listData.data[0].id;
+      // FIX: The Cloudflare RealtimeKit API doesn't always filter exactly by `title` in the query string.
+      // If we blindly take `listData.data[0].id`, all responses get dumped into whatever the very first 
+      // meeting in the account is (the same shared meeting room). We MUST verify the exact title string.
+      const exactMatch = listData.data.find((m: any) => m.title === responseId);
+      if (exactMatch) {
+        cfMeetingId = exactMatch.id;
+      }
     }
 
     // ── Step 2: Create the meeting if it doesn't exist ────────────────────────

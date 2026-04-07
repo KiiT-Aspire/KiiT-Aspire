@@ -82,6 +82,14 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+// Helper to safely sync ReactMediaRecorder state to parent without triggering "bad setState in render"
+function RecorderSync({ status, data, setCurrentStatus, recorderRef }: any) {
+  useEffect(() => {
+    setCurrentStatus(status);
+    recorderRef.current = data;
+  }, [status, data, setCurrentStatus, recorderRef]);
+  return null;
+}
 
 function IntervieweePageInner() {
   const params = useParams();
@@ -783,9 +791,6 @@ function IntervieweePageInner() {
                   audio.onloadedmetadata = () => setRecordedAudioDuration(Math.floor(audio.duration));
                 }}
                 render={({ status, startRecording, stopRecording, mediaBlobUrl, clearBlobUrl }) => {
-                  recorderRef.current = { startRecording, stopRecording, status, clearBlobUrl };
-                  setCurrentStatus(status);
-
                   const handleSubmitAnswer = async () => {
                     if (!mediaBlobUrl) return toast.error("No audio recorded");
                     await sendAudioToAPI(mediaBlobUrl, recordedAudioDuration);
@@ -795,6 +800,12 @@ function IntervieweePageInner() {
 
                   return (
                     <div className="w-full flex flex-col items-center gap-6">
+                      <RecorderSync 
+                        status={status} 
+                        setCurrentStatus={setCurrentStatus} 
+                        recorderRef={recorderRef} 
+                        data={{ startRecording, stopRecording, status, clearBlobUrl }} 
+                      />
                       {/* Mic visualizer */}
                       <div className="relative">
                         {status === "recording" && (

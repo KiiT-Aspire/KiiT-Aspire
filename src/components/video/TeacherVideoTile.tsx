@@ -22,11 +22,10 @@ import { useEffect, useRef, useState } from "react";
 import RTKClient from "@cloudflare/realtimekit";
 import type { RTKParticipant } from "@cloudflare/realtimekit";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export interface TeacherVideoTileProps {
   responseId: string;
   studentName?: string;
+  isTalking?: boolean;
 }
 
 // ─── Single participant video tile ────────────────────────────────────────────
@@ -88,6 +87,7 @@ function ParticipantVideoTile({
 export default function TeacherVideoTile({
   responseId,
   studentName,
+  isTalking,
 }: TeacherVideoTileProps) {
   const [connecting, setConnecting] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -204,6 +204,23 @@ export default function TeacherVideoTile({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [responseId]);
+
+  // ── 7. Handle teacher mic (isTalking) ──────────────────────────────────────
+  useEffect(() => {
+    if (!clientRef.current) return;
+    const self = clientRef.current.self;
+    if (!self || self.roomState !== "joined") return;
+
+    if (isTalking) {
+      self.enableAudio().catch((e: unknown) =>
+        console.error("[TeacherVideoTile] enableAudio:", e)
+      );
+    } else {
+      self.disableAudio().catch((e: unknown) =>
+        console.error("[TeacherVideoTile] disableAudio:", e)
+      );
+    }
+  }, [isTalking, connecting]);
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (connecting) {
