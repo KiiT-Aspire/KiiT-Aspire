@@ -3,22 +3,25 @@
 /**
  * TeacherVideoTile — Fully self-contained per-student camera feed.
  *
- * KEY INSIGHT (race condition fix):
- * RTK fires `participantJoined` for already-in-room peers during the `join()` call.
- * If we attach listeners AFTER `join()` returns, those events are already gone and
- * `participants.joined.toArray()` may still be empty at that moment because the SDK
- * populates it asynchronously. We therefore:
- *  1. Attach ALL listeners before calling `join()`.
- *  2. After `join()`, snapshot current state (catches any that already were there).
- *  3. Poll `snap()` at 500 ms / 1.5 s / 3 s as a safety net for async population.
+ * ARCHITECTURE:
+ * Each tile creates its own isolated RTKClient (NOT the shared singleton from
+ * useRealtimeKitClient). This ensures each tile connects to a different Cloudflare
+ * meeting room — one per student responseId.
  *
- * We do NOT use useRealtimeKitSelector / RealtimeKitProvider — those have a
- * "missed initial events" problem when the client is created outside the hook lifecycle.
+ * RACE CONDITION FIX:
+ * The token API now distinguishes role="student" vs role="teacher".
+ * Only students create meetings; teachers only join existing ones.
+ * If the student hasn't created their meeting yet, the API returns
+ * MEETING_NOT_READY and this tile retries with exponential backoff.
+ *
+ * PARTICIPANT EVENTS:
+ * Listeners are attached BEFORE join() so we catch participantJoined events
+ * that fire during the handshake for already-present peers.
  *
  * Must be loaded with `dynamic(() => import(...), { ssr: false })`.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import RTKClient from "@cloudflare/realtimekit";
 import type { RTKParticipant } from "@cloudflare/realtimekit";
 
@@ -36,15 +39,11 @@ function ParticipantVideoTile({
   participant: RTKParticipant;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  // Seed with current track — may already be non-null if the student was
-  // already publishing when we joined.
   const [videoTrack, setVideoTrack] = useState<MediaStreamTrack | undefined>(
     participant.videoTrack ?? undefined
   );
 
   useEffect(() => {
-    // Also re-read on mount in case the track was set between the render that
-    // created this component and this effect running.
     setVideoTrack(participant.videoTrack ?? undefined);
 
     const onVideoUpdate = ({
@@ -93,60 +92,86 @@ export default function TeacherVideoTile({
   const [error, setError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<RTKParticipant[]>([]);
   const clientRef = useRef<RTKClient | null>(null);
+  const mountedRef = useRef(true);
+
+  // Fetch token with retry for MEETING_NOT_READY
+  const fetchToken = useCallback(async (attempt: number): Promise<{ token: string } | null> => {
+    const MAX_ATTEMPTS = 8;
+    const res = await fetch("/api/cloudflarerealtime/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        meetingId: responseId,
+        participantName: `Proctor-${studentName ?? responseId.slice(0, 6)}`,
+        role: "teacher",
+      }),
+    });
+    const data = await res.json();
+
+    if (!mountedRef.current) return null;
+
+    if (data.success && data.token) {
+      return { token: data.token };
+    }
+
+    if (data.error === "MISSING_CREDENTIALS") {
+      setError("Video disabled — set Cloudflare env vars");
+      setConnecting(false);
+      return null;
+    }
+
+    if (data.error === "MEETING_NOT_READY" && attempt < MAX_ATTEMPTS) {
+      // Student hasn't created their meeting yet — wait and retry
+      const delay = Math.min(2000 * Math.pow(1.5, attempt), 10000);
+      console.log(`[TeacherVideoTile] Meeting not ready for ${responseId}, retry #${attempt + 1} in ${delay}ms`);
+      await new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, delay);
+        // If unmounted during wait, resolve immediately
+        const check = setInterval(() => {
+          if (!mountedRef.current) { clearInterval(check); clearTimeout(t); resolve(); }
+        }, 200);
+        setTimeout(() => clearInterval(check), delay + 100);
+      });
+      if (!mountedRef.current) return null;
+      return fetchToken(attempt + 1);
+    }
+
+    setError(data.message ?? data.error ?? "Token fetch failed");
+    setConnecting(false);
+    return null;
+  }, [responseId, studentName]);
 
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
     const retryTimers: ReturnType<typeof setTimeout>[] = [];
 
     (async () => {
       try {
-        // ── 1. Fetch room token ───────────────────────────────────────────────
-        const res = await fetch("/api/cloudflarerealtime/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            meetingId: responseId,
-            participantName: `Proctor-${studentName ?? responseId.slice(0, 6)}`,
-          }),
-        });
-        const data = await res.json();
+        // ── 1. Fetch room token (with retry) ──────────────────────────────────
+        const tokenData = await fetchToken(0);
+        if (!tokenData || !mountedRef.current) return;
 
-        if (!mounted) return;
-
-        if (!data.success || !data.token) {
-          setError(
-            data.error === "MISSING_CREDENTIALS"
-              ? "Video disabled — set Cloudflare env vars"
-              : (data.message ?? data.error ?? "Token fetch failed")
-          );
-          setConnecting(false);
-          return;
-        }
-
-        // ── 2. Create isolated RTK client ────────────────────────────────────
+        // ── 2. Create isolated RTK client ─────────────────────────────────────
         const rtkClient = await RTKClient.init({
-          authToken: data.token,
+          authToken: tokenData.token,
           defaults: { video: false, audio: false },
         });
 
-        if (!mounted) {
+        if (!mountedRef.current) {
           rtkClient.leave().catch(() => {});
           return;
         }
 
         clientRef.current = rtkClient;
 
-        // ── 3. Attach listeners BEFORE join() ────────────────────────────────
-        // This is the critical fix: RTK fires `participantJoined` for peers
-        // already in the room during the join() handshake. If we wait until
-        // after join() to add listeners, we miss those events.
+        // ── 3. Attach listeners BEFORE join() ─────────────────────────────────
         const joinedMap = rtkClient.participants.joined;
 
         const snap = (): RTKParticipant[] =>
           (joinedMap.toArray() as RTKParticipant[]) ?? [];
 
         const refresh = () => {
-          if (mounted) setParticipants(snap());
+          if (mountedRef.current) setParticipants(snap());
         };
 
         joinedMap.on("participantJoined", refresh);
@@ -156,22 +181,19 @@ export default function TeacherVideoTile({
         // ── 4. Join the room ──────────────────────────────────────────────────
         await rtkClient.join();
 
-        if (!mounted) {
+        if (!mountedRef.current) {
           rtkClient.leave().catch(() => {});
           return;
         }
 
-        // ── 5. Read current participants immediately after join ───────────────
+        // ── 5. Read current participants immediately after join ────────────────
         setParticipants(snap());
         setConnecting(false);
 
-        // ── 6. Retry snapshots — safety net for async participant population ──
-        // Some SDKs populate participants.joined asynchronously even after the
-        // join() Promise resolves. We retry a few times to catch them without
-        // relying solely on events.
+        // ── 6. Safety-net snapshots ───────────────────────────────────────────
         [500, 1500, 3000, 5000].forEach((ms) => {
           const t = setTimeout(() => {
-            if (mounted) {
+            if (mountedRef.current) {
               const current = snap();
               if (current.length > 0) {
                 setParticipants(current);
@@ -182,7 +204,7 @@ export default function TeacherVideoTile({
         });
       } catch (e) {
         console.error("[TeacherVideoTile] error for room", responseId, e);
-        if (mounted) {
+        if (mountedRef.current) {
           setError("Connection error");
           setConnecting(false);
         }
@@ -190,7 +212,7 @@ export default function TeacherVideoTile({
     })();
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       retryTimers.forEach(clearTimeout);
       const c = clientRef.current;
       if (c) {
@@ -205,7 +227,7 @@ export default function TeacherVideoTile({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [responseId]);
 
-  // ── 7. Handle teacher mic (isTalking) ──────────────────────────────────────
+  // ── Handle teacher mic (isTalking) ──────────────────────────────────────────
   useEffect(() => {
     if (!clientRef.current) return;
     const self = clientRef.current.self;

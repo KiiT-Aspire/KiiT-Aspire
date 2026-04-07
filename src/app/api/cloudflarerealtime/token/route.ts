@@ -5,19 +5,25 @@ const CF_BASE = "https://api.cloudflare.com/client/v4";
 /**
  * POST /api/cloudflarerealtime/token
  *
- * Body: { meetingId: string (our DB responseId), participantName: string }
+ * Body: {
+ *   meetingId: string (our DB responseId),
+ *   participantName: string,
+ *   role: "student" | "teacher"    ← NEW: prevents duplicate-meeting race
+ * }
  *
- * Flow:
- *  1. Look up whether a Cloudflare meeting already exists for this responseId.
- *     We store the mapping in Cloudflare meeting title = responseId so we can
- *     search for it by title.
- *  2. If not found → create a new Cloudflare meeting with title = responseId.
- *  3. Add a participant to the meeting → returns an auth token.
- *  4. Return { success: true, token, cfMeetingId }.
+ * RACE CONDITION FIX:
+ * Previously both student and teacher called this API simultaneously, both saw
+ * "no meeting exists", and both created separate Cloudflare meetings. The student
+ * ended up in room A, teacher in room B — they could never see each other.
+ *
+ * Now:
+ *  - role="student" → find existing meeting OR create a new one (only students create)
+ *  - role="teacher" → find existing meeting ONLY. If not found, return MEETING_NOT_READY
+ *    so the TeacherVideoTile can retry after a delay.
  */
 export async function POST(req: Request) {
   try {
-    const { meetingId: responseId, participantName } = await req.json();
+    const { meetingId: responseId, participantName, role } = await req.json();
 
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     const appId = process.env.CLOUDFLARE_APP_ID;
@@ -36,32 +42,45 @@ export async function POST(req: Request) {
       "Content-Type": "application/json",
     };
 
-    // ── Step 1: Find or create a Cloudflare meeting for this responseId ──────
+    // ── Step 1: Search for existing meeting with this responseId as title ─────
+    // Cloudflare's API ignores the ?title= query param and returns ALL meetings,
+    // so we fetch up to 100 and filter in-memory.
 
     let cfMeetingId: string | null = null;
 
-    // Search existing meetings by title (we use our responseId as the title)
-    // IMPORTANT: Cloudflare API ignores ?title= and returns all meetings. We MUST 
-    // fetch a larger limit (e.g. limit=100) and manually search for the exact match.
     const listRes = await fetch(
       `${CF_BASE}/accounts/${accountId}/realtime/kit/${appId}/meetings?limit=100`,
       { headers }
     );
     const listData = await listRes.json();
 
-    if (listData.success && Array.isArray(listData.data) && listData.data.length > 0) {
-      // FIX: The Cloudflare RealtimeKit API doesn't always filter exactly by `title` in the query string.
-      // If we blindly take `listData.data[0].id`, all responses get dumped into whatever the very first 
-      // meeting in the account is (the same shared meeting room). We MUST verify the exact title string.
-      const exactMatch = listData.data.find((m: any) => m.title === responseId);
-      if (exactMatch) {
-        cfMeetingId = exactMatch.id;
+    if (listData.success && Array.isArray(listData.data)) {
+      // Find ALL meetings with matching title (there may be duplicates from old bugs)
+      const matches = listData.data.filter((m: any) => m.title === responseId);
+      if (matches.length > 0) {
+        // Use the OLDEST meeting — that's the one the student created first
+        matches.sort((a: any, b: any) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        cfMeetingId = matches[0].id;
+        console.log(`[CF Token] Found existing meeting ${cfMeetingId} for ${responseId} (${matches.length} match(es))`);
       }
     }
 
-    // ── Step 2: Create the meeting if it doesn't exist ────────────────────────
+    // ── Step 2: Create or bail depending on role ──────────────────────────────
 
     if (!cfMeetingId) {
+      if (role === "teacher") {
+        // Teacher must NOT create meetings — return "not ready" so tile retries
+        console.log(`[CF Token] Teacher requested meeting for ${responseId} but student hasn't created it yet`);
+        return NextResponse.json({
+          success: false,
+          error: "MEETING_NOT_READY",
+          message: "Student hasn't started their camera yet. Retrying...",
+        });
+      }
+
+      // Student (or legacy callers without role): create the meeting
       const createRes = await fetch(
         `${CF_BASE}/accounts/${accountId}/realtime/kit/${appId}/meetings`,
         {
@@ -78,6 +97,7 @@ export async function POST(req: Request) {
       }
 
       cfMeetingId = createData.data.id;
+      console.log(`[CF Token] Created new meeting ${cfMeetingId} for ${responseId}`);
     }
 
     // ── Step 3: Add participant to the meeting → get auth token ───────────────
@@ -87,10 +107,10 @@ export async function POST(req: Request) {
       {
         method: "POST",
         headers,
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           name: participantName || "Participant",
           presetName: "group_call_participant",
-          customParticipantId: crypto.randomUUID()
+          customParticipantId: crypto.randomUUID(),
         }),
       }
     );

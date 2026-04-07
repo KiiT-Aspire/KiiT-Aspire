@@ -180,6 +180,7 @@ export default function VideoRTCWidget(props: VideoRTCWidgetProps) {
             participantName:
               props.studentName ??
               (props.mode === "teacher" ? "Proctor" : "Student"),
+            role: props.mode === "student" ? "student" : "teacher",
           }),
         });
         const data = await res.json();
