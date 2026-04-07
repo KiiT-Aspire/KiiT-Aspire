@@ -29,15 +29,19 @@ const genAI = new GoogleGenAI({
 // Extract score from evaluation text
 function extractScore(evaluationText: string): number {
   const scoreMatch = evaluationText.match(
-    /(\d+)(?:\s*(?:\/|out of)\s*(?:30|100)|\s*points?)/i
+    /(\d+)(?:\s*(?:\/|out of)\s*100|\s*points?)/i
   );
   if (scoreMatch) {
     const score = parseInt(scoreMatch[1]);
-    if (score > 30) {
-      return Math.round((score / 100) * 30);
-    }
-    return score;
+    return Math.min(100, score);
   }
+  
+  // Fallback: Just look for any 'Score: X' pattern
+  const fallbackMatch = evaluationText.match(/score:\s*(\d+)/i);
+  if (fallbackMatch) {
+    return Math.min(100, parseInt(fallbackMatch[1]));
+  }
+
   return 0;
 }
 
@@ -91,15 +95,15 @@ STRICT RULES:
    - If the answer is ADEQUATE/GOOD: Move to the next question (or end if all done).
    - If the answer is POOR/INCOMPLETE and this is NOT a retry: Ask ONE helpful follow-up on the SAME topic to guide the student.
    - If the answer is POOR/INCOMPLETE and this IS a retry (second chance already given): Move to the next question regardless.
-5. When all questions are done, return EVALUATION.
+5. When all questions are done, return EVALUATION. In the EVALUATION, you MUST include a final overall score out of 100 in the format "Score: X/100".
 
 Response Format (JSON ONLY - no other text):
 {
   "transcript": "exact transcript of what the student said",
   "answerQuality": "good" | "poor",
-  "nextStep": "NEXT_QUESTION | RETRY_FOLLOWUP | EVALUATION"
+  "nextStep": "NEXT_QUESTION | RETRY_FOLLOWUP | EVALUATION",
   "followUpQuestion": "the guided follow-up question text (only if nextStep is RETRY_FOLLOWUP)",
-  "evaluationReport": "full markdown evaluation report (only if nextStep is EVALUATION)"
+  "evaluationReport": "full markdown evaluation report (only if nextStep is EVALUATION). MUST include 'Score: X/100' at the end."
 }`;
 
     const contents = [
@@ -159,7 +163,7 @@ Evaluate the student's audio response and decide the next step according to the 
       // All questions done → evaluate
       const evalText = nextStep === "EVALUATION" && aiData.evaluationReport
         ? `EVALUATION:\n${aiData.evaluationReport}`
-        : `EVALUATION: Thank you for completing the interview. The student answered ${totalQuestions} question(s).`;
+        : `EVALUATION: Thank you for completing the interview. The student answered ${totalQuestions} question(s). Score: 100/100`;
       return {
         nextQuestion: evalText,
         transcript,
