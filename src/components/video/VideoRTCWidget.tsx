@@ -69,6 +69,10 @@ function LocalVideoFeed() {
 function RemoteVideoTile({ participantId }: { participantId: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // NOTE: We intentionally do NOT check `videoEnabled` here.
+  // Students call enableVideo() slightly after join(), so there is a brief
+  // window where videoEnabled=false but videoTrack already exists. Checking
+  // videoEnabled causes srcObject=null → video never recovers until re-render.
   const videoTrack = useRealtimeKitSelector((m: RTKClient) => {
     const p = m.participants?.joined?.toArray?.()?.find(
       (x: { id: string }) => x.id === participantId
@@ -76,22 +80,15 @@ function RemoteVideoTile({ participantId }: { participantId: string }) {
     return (p as { videoTrack?: MediaStreamTrack } | undefined)?.videoTrack;
   });
 
-  const videoEnabled = useRealtimeKitSelector((m: RTKClient) => {
-    const p = m.participants?.joined?.toArray?.()?.find(
-      (x: { id: string }) => x.id === participantId
-    );
-    return (p as { videoEnabled?: boolean } | undefined)?.videoEnabled ?? false;
-  });
-
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    if (videoTrack && videoEnabled) {
+    if (videoTrack) {
       el.srcObject = new MediaStream([videoTrack]);
     } else {
       el.srcObject = null;
     }
-  }, [videoTrack, videoEnabled]);
+  }, [videoTrack]);
 
   return (
     <video
@@ -230,14 +227,22 @@ export default function VideoRTCWidget(props: VideoRTCWidgetProps) {
       }
     };
 
+    // Attempt immediately if already joined
     if (self.roomState === "joined") {
       enableCam();
     }
 
-    // Also handle late / re-joins
+    // Handle the join event (fires when room state transitions to "joined")
     self.on("roomJoined", enableCam);
+
+    // Fallback: retry after 1s to handle timing gaps where roomState hasn't
+    // updated to "joined" yet when this effect ran (e.g. between join() call
+    // resolving and roomJoined event firing).
+    const retryTimer = setTimeout(enableCam, 1000);
+
     return () => {
       self.removeListener("roomJoined", enableCam);
+      clearTimeout(retryTimer);
     };
   }, [meeting, props.mode]);
 

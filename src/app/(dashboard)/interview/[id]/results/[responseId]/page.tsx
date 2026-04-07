@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 
 // Dynamically imported with ssr:false — cloudflare realtimekit is browser-only
-const VideoRTCWidget = dynamic(
-  () => import("@/components/video/VideoRTCWidget"),
+const TeacherVideoTile = dynamic(
+  () => import("@/components/video/TeacherVideoTile"),
   { ssr: false, loading: () => null }
 );
 
@@ -243,7 +243,13 @@ function ResponseDetailPageInner() {
             
             {response.status === "in_progress" && (
               <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                <VideoRTCWidget responseId={responseId} mode="teacher" />
+                <div className="relative aspect-video rounded-[20px] overflow-hidden border border-green-200 bg-gray-50 mb-6 shadow-sm">
+                  <TeacherVideoTile responseId={responseId} studentName={response.studentName} />
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-lg backdrop-blur z-10 border border-white/20">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                    <span className="text-[11px] font-bold text-white uppercase tracking-widest">Live</span>
+                  </div>
+                </div>
               </motion.section>
             )}
 
