@@ -118,6 +118,7 @@ function IntervieweePageInner() {
   const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "pending" | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [isRetryAttempt, setIsRetryAttempt] = useState<boolean>(false);
+  const [isAbandoned, setIsAbandoned] = useState(false);
 
   const recorderRef = useRef<any>({});
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -186,26 +187,29 @@ function IntervieweePageInner() {
   }, [interviewStarted, interviewComplete, timeRemaining, endInterviewDueToTimeout]);
 
   // ── Abandon on tab close / navigation away ────────────────────────────────────
+  // beforeunload  → tab close, browser close, hard refresh (user won't see UI)
+  // visibilitychange hidden → tab switch / app switch (user WILL come back, show UI)
   // Uses navigator.sendBeacon — the only reliable way to fire a network request
   // when the browser is closing the page. Regular fetch() is killed mid-flight.
-  // Only active while the interview is started AND not yet complete.
   useEffect(() => {
-    if (!interviewStarted || interviewComplete || !responseId || !interviewId) return;
+    if (!interviewStarted || interviewComplete || isAbandoned || !responseId || !interviewId) return;
 
     const abandon = () => {
-      // sendBeacon is fire-and-forget; the browser guarantees delivery even on page close
       navigator.sendBeacon(
         `/api/interviews/${interviewId}/responses/${responseId}/abandon`,
         new Blob([JSON.stringify({})], { type: "application/json" })
       );
     };
 
-    // beforeunload: tab close, browser close, hard refresh
+    // Tab close / hard refresh — fire beacon only (no UI update possible)
     window.addEventListener("beforeunload", abandon);
 
-    // visibilitychange: catches mobile app switching and some navigation cases
+    // Tab switch — fire beacon AND show abandoned screen when user returns
     const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") abandon();
+      if (document.visibilityState === "hidden") {
+        abandon();
+        setIsAbandoned(true);
+      }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
@@ -213,7 +217,7 @@ function IntervieweePageInner() {
       window.removeEventListener("beforeunload", abandon);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [interviewStarted, interviewComplete, responseId, interviewId]);
+  }, [interviewStarted, interviewComplete, isAbandoned, responseId, interviewId]);
 
 
   const requestCameraPermission = useCallback(async () => {
@@ -591,7 +595,68 @@ function IntervieweePageInner() {
     );
   }
 
+  // ─── ABANDONED STATE ─────────────────────────────────────────────────────────
+  if (isAbandoned) {
+    return (
+      <div className="min-h-screen bg-[#f8faf8] flex flex-col items-center justify-center px-4">
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-red-200/[0.06] blur-[140px] rounded-full" />
+        </div>
+        <Toaster position="top-right" toastOptions={{ style: { background: "#fff", color: "#111", border: "1px solid #e5e7eb", borderRadius: "12px" } }} />
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="relative z-10 w-full max-w-md text-center"
+        >
+          {/* Icon */}
+          <div className="flex justify-center mb-7">
+            <div className="relative">
+              <div className="absolute inset-0 bg-amber-400/20 blur-2xl rounded-full scale-150" />
+              <div className="relative w-20 h-20 rounded-[20px] bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-[0_0_40px_rgba(251,191,36,0.3)]">
+                <AlertCircle className="w-10 h-10 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-[2rem] font-bold text-gray-900 tracking-tight mb-3">
+            Interview Abandoned
+          </h1>
+          <p className="text-gray-500 text-[15px] leading-relaxed mb-2">
+            You switched away from the interview tab, so your session was automatically marked as <strong className="text-orange-600 font-semibold">abandoned</strong>.
+          </p>
+          <p className="text-gray-400 text-[13px] leading-relaxed mb-8">
+            This was to maintain the integrity of the evaluation. Please contact your interviewer if you believe this was a mistake.
+          </p>
+
+          {/* Info card */}
+          <div className="rounded-[16px] border border-amber-100 bg-amber-50 p-5 text-left">
+            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-widest mb-3">What happened?</p>
+            <div className="space-y-2">
+              {[
+                "Your tab was hidden or you switched to another application",
+                "The system automatically flagged your session as abandoned",
+                "Your interviewer has been notified of the status change",
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                  <p className="text-[13px] text-amber-800 leading-relaxed">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="mt-6 text-gray-400 text-[12px]">
+            You may safely close this window.
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
   // ─── ACTIVE INTERVIEW ────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen bg-[#f8faf8] flex flex-col">
       {/* Background */}
