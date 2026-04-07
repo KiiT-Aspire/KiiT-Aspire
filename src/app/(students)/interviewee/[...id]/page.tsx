@@ -291,7 +291,10 @@ function IntervieweePageInner() {
                 toast.success("Interview completed!");
               } else if (result.data.nextQuestion) {
                 setCurrentQuestion(result.data.nextQuestion);
-                setQuestionCount((prev) => prev + 1);
+                // Only increment question counter when moving to a NEW question, not on retries
+                if (!result.data.isRetryAttempt) {
+                  setQuestionCount((prev) => prev + 1);
+                }
                 setQuestionsAsked(result.data.questionsAsked || ((prev: string[]) => [...prev, result.data.nextQuestion]));
                 setCurrentQuestionIndex(result.data.currentQuestionIndex ?? 0);
                 setIsRetryAttempt(result.data.isRetryAttempt ?? false);

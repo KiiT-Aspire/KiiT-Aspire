@@ -192,10 +192,10 @@ Evaluate the student's audio response and decide the next step according to the 
     const nextIndex = currentQuestionIndex + 1;
     if (nextIndex >= availableQuestions.length) {
       return {
-        nextQuestion: "EVALUATION: Thank you for completing the interview. Score: 21/30",
+        nextQuestion: "EVALUATION: Thank you for completing the interview. Score: 70/100",
         transcript: "Technical issue occurred during transcription.",
         isEvaluation: true,
-        score: 21,
+        score: 70,
         nextQuestionIndex: nextIndex,
         isNextRetryAttempt: false,
         updatedQuestionsAsked: questionsAsked,

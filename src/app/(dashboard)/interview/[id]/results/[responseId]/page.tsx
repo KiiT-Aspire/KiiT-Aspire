@@ -44,13 +44,14 @@ const fadeUp: Variants = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
 };
-const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } };function ScoreRing({ score }: { score: number }) {
+const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } };
+
+function ScoreRing({ score }: { score: number }) {
   const radius = 42;
   const circ = 2 * Math.PI * radius;
-  const filled = (score / 30) * circ; // Score is out of 30 now
-  const percentage = (score / 30) * 100;
-  const color = percentage >= 75 ? "#10b981" : percentage >= 50 ? "#f59e0b" : "#ef4444";
-  const textColor = percentage >= 75 ? "text-green-700" : percentage >= 50 ? "text-amber-700" : "text-red-700";
+  const filled = (score / 100) * circ;
+  const color = score >= 75 ? "#10b981" : score >= 50 ? "#f59e0b" : "#ef4444";
+  const textColor = score >= 75 ? "text-green-700" : score >= 50 ? "text-amber-700" : "text-red-700";
   
   return (
     <div className="relative flex items-center justify-center">
@@ -74,7 +75,7 @@ const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren
         >
           {score}
         </motion.span>
-        <div className="text-[10px] text-gray-400 font-bold tracking-tighter mt-1 uppercase">Points / 30</div>
+        <div className="text-[10px] text-gray-400 font-bold tracking-tighter mt-1 uppercase">Points / 100</div>
       </div>
     </div>
   );
@@ -427,13 +428,13 @@ function ResponseDetailPageInner() {
                         <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center">
                           <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Status</p>
                           <p className="text-[14px] font-black text-gray-900 uppercase tracking-tight">
-                            {response.score >= 22 ? "Advanced" : response.score >= 15 ? "Competent" : "Developing"}
+                            {response.score >= 75 ? "Advanced" : response.score >= 50 ? "Competent" : "Developing"}
                           </p>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center">
                           <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Rank</p>
                           <p className="text-[14px] font-black text-gray-900 tracking-tight">
-                            {response.score >= 25 ? "Top 5%" : "Verified"}
+                            {response.score >= 85 ? "Top 5%" : "Verified"}
                           </p>
                         </div>
                       </div>
