@@ -21,10 +21,23 @@ interface TeacherVideoTileProps {
   studentName?: string;
 }
 
+interface AudioBridgeWidgetProps {
+  responseId: string;
+  participantName?: string;
+}
+
 const TeacherVideoTile = dynamic(
   () =>
     import("@/components/video/TeacherVideoTile") as Promise<{
       default: ComponentType<TeacherVideoTileProps>;
+    }>,
+  { ssr: false, loading: () => null }
+);
+
+const AudioBridgeWidget = dynamic(
+  () =>
+    import("@/components/video/AudioBridgeWidget") as Promise<{
+      default: ComponentType<AudioBridgeWidgetProps>;
     }>,
   { ssr: false, loading: () => null }
 );
@@ -272,6 +285,14 @@ export default function ResultsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {sorted.filter(r => r.status === "in_progress").map(r => (
                 <div key={r.id} className="relative aspect-video rounded-xl overflow-hidden bg-white border border-green-200 hover:border-green-400 transition-colors shadow-sm">
+                   {/* Audio bridge: connects teacher mic to this student's room (invisible) */}
+                  {talkingTo === r.id && (
+                    <AudioBridgeWidget
+                      key={r.id}
+                      responseId={r.id}
+                      participantName="Proctor-Audio"
+                    />
+                  )}
                   <TeacherVideoTile responseId={r.id} studentName={r.studentName} />
                   <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded backdrop-blur z-10 border border-white/20">
                     <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
