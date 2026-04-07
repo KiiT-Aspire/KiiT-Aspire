@@ -185,6 +185,37 @@ function IntervieweePageInner() {
     return () => { if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current); };
   }, [interviewStarted, interviewComplete, timeRemaining, endInterviewDueToTimeout]);
 
+  // ── Abandon on tab close / navigation away ────────────────────────────────────
+  // Uses navigator.sendBeacon — the only reliable way to fire a network request
+  // when the browser is closing the page. Regular fetch() is killed mid-flight.
+  // Only active while the interview is started AND not yet complete.
+  useEffect(() => {
+    if (!interviewStarted || interviewComplete || !responseId || !interviewId) return;
+
+    const abandon = () => {
+      // sendBeacon is fire-and-forget; the browser guarantees delivery even on page close
+      navigator.sendBeacon(
+        `/api/interviews/${interviewId}/responses/${responseId}/abandon`,
+        new Blob([JSON.stringify({})], { type: "application/json" })
+      );
+    };
+
+    // beforeunload: tab close, browser close, hard refresh
+    window.addEventListener("beforeunload", abandon);
+
+    // visibilitychange: catches mobile app switching and some navigation cases
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") abandon();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", abandon);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [interviewStarted, interviewComplete, responseId, interviewId]);
+
+
   const requestCameraPermission = useCallback(async () => {
     setCameraPermission("pending");
     try {
